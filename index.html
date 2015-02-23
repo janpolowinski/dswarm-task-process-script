@@ -47,6 +47,8 @@
     };
     
 
+    
+
 
     	
     
@@ -93,7 +95,21 @@
             	currentOutputDatamodel = result
             	//console.log(result);
             	currentTask = buildTask(currentJob, currentInputDatamodel, currentOutputDatamodel);
-            	console.log(currentTask);
+            	//console.log(currentTask);
+            	//console.log(JSON.stringify(currentTask));
+
+            	  	// run task
+            	  	d3.xhr(baseUrlBackend + "tasks?persist=false")
+            	    .header("Content-Type", "application/json;charset=utf-8")
+            	    .post(
+            	        JSON.stringify(currentTask),
+            	        function(err, rawData){
+            	        	//console.log(rawData.response);
+            	            var transformationResult = JSON.parse(rawData.response);
+                	  		console.log("Transformation results:");
+                	  		console.log(transformationResult);
+            	        }
+            	    );
             	
         	});	
     	}); 	
