@@ -9,6 +9,13 @@
     </head>
     <body>
     
+    <h1>Current Task Configuration</h1>
+    <ul id="taskConfigView">
+    	<li id="projectID"><span>projectID: </span><span class="value"> ... </span></li>
+    	<li id="inputDatamodelID"><span>inputDatamodelID: </span><span class="value"> ... </span></li>
+    	<li id="outputDatamodelID"><span>outputDatamodelID: </span><span class="value"> ... </span></li>
+    <ul>
+    
     <script type="text/javascript">
     
     /* SETTINGS */
@@ -18,6 +25,11 @@
     var projectID = "21840fd7-ff93-83ff-6106-18948199f8b6";
     var inputDatamodelID = "2ff8370e-3825-bf79-f66d-4d67c31eb67c";
     var outputDatamodelID = "DataModel-cf998267-392a-4d87-a33a-88dd1bffb016";
+    
+    var taskConfig = {};
+    taskConfig.projectID = projectID;
+    taskConfig.inputDatamodelID = inputDatamodelID;
+    taskConfig.outputDatamodelID = outputDatamodelID;
     
     /* GLOBALS */
     var currentProject;
@@ -46,13 +58,71 @@
     	return task;
     };
     
-
     
-
+    function updateParameterView() {
+    	
+    	contents.select("#projectID").select("span.value").text(projectID);
+    	contents.select("#inputDatamodelID").select("span.value").text(inputDatamodelID);
+    	contents.select("#outputDatamodelID").select("span.value").text(outputDatamodelID);
+    }
+    
+    var contents = d3.select("body");
+    
+    updateParameterView();
+    
+    // list projects
+    d3.json(baseUrlBackend + "projects", function (error, result) {
+    	
+    	contents.append("h2").text("Projects");
+    	
+    	var lis = contents
+    		.append("div").append("ul")
+    		.selectAll("li.project")
+    		.data(result)
+    		;
+    	
+    	lis.enter()
+    		.append("li")
+    		.attr("class", "project")
+    		.text(function(d){ return d.name + " (" + d.uuid + ")"; })
+    		.attr("title", function(d){ return d.description; })
+    		;
+    	
+    	lis.append("button")
+    		.attr("onclick", function(d){
+    			return "projectID = '" + d.uuid + "'; console.log('projectID now ' + projectID);";
+   				})
+			.text(function(d){return "Create job from this project (" + d.uuid + ")";})
+			;
+    	
+    });
+    
+    // list projects
+    d3.json(baseUrlBackend + "datamodels", function (error, result) {
+    	
+    	contents.append("h2").text("Datamodels");
+    	
+    	var lis = contents
+    		.append("div").append("ul")
+    		.selectAll("li.datamodel")
+    		.data(result)
+    		;
+    	
+    	lis.enter()
+    		.append("li")
+    		.attr("class", "datamodel")
+    		.text(function(d){ return d.name + " - " + d.description + " (" + d.uuid + ")"; })
+    		;
+    	
+    	lis.append("button")
+		.attr("onclick", function(d){
+			return "inputDatamodelID = '" + d.uuid + "'; console.log('inputDatamodelID now ' + inputDatamodelID);";
+				})
+		.text(function(d){return "Use as input (" + d.uuid + ")";})
+		;
 
     	
-    
-    d3.select("body").append("div").text("test");
+    });
 
     
 //    d3.json(baseUrlBackend + "projects/" + projectID, function (error, result) {
@@ -76,44 +146,44 @@
 //	});
     
     
-    // get project and build job
-    d3.json(baseUrlBackend + "projects/" + projectID, function (error, result) {
-    	
-    	currentProject = result;
-        currentJob = buildJob(currentProject);
-    	//console.log(currentJob);
-    	
-        // get input data model
-        d3.json(baseUrlBackend + "datamodels/" + inputDatamodelID, function (error, result) {
-        	
-            currentInputDatamodel = result;
-        	//console.log(currentInputDatamodel);
-
-            // get output data model
-            d3.json(baseUrlBackend + "datamodels/" + outputDatamodelID, function (error, result) {
-            	
-            	currentOutputDatamodel = result
-            	//console.log(result);
-            	currentTask = buildTask(currentJob, currentInputDatamodel, currentOutputDatamodel);
-            	//console.log(currentTask);
-            	//console.log(JSON.stringify(currentTask));
-
-            	  	// run task
-            	  	d3.xhr(baseUrlBackend + "tasks?persist=false")
-            	    .header("Content-Type", "application/json;charset=utf-8")
-            	    .post(
-            	        JSON.stringify(currentTask),
-            	        function(err, rawData){
-            	        	//console.log(rawData.response);
-            	            var transformationResult = JSON.parse(rawData.response);
-                	  		console.log("Transformation results:");
-                	  		console.log(transformationResult);
-            	        }
-            	    );
-            	
-        	});	
-    	}); 	
-	});
+//    // get project and build job
+//    d3.json(baseUrlBackend + "projects/" + projectID, function (error, result) {
+//    	
+//    	currentProject = result;
+//        currentJob = buildJob(currentProject);
+//    	//console.log(currentJob);
+//    	
+//        // get input data model
+//        d3.json(baseUrlBackend + "datamodels/" + inputDatamodelID, function (error, result) {
+//        	
+//            currentInputDatamodel = result;
+//        	//console.log(currentInputDatamodel);
+//
+//            // get output data model
+//            d3.json(baseUrlBackend + "datamodels/" + outputDatamodelID, function (error, result) {
+//            	
+//            	currentOutputDatamodel = result
+//            	//console.log(result);
+//            	currentTask = buildTask(currentJob, currentInputDatamodel, currentOutputDatamodel);
+//            	//console.log(currentTask);
+//            	//console.log(JSON.stringify(currentTask));
+//
+//            	  	// run task
+//            	  	d3.xhr(baseUrlBackend + "tasks?persist=false")
+//            	    .header("Content-Type", "application/json;charset=utf-8")
+//            	    .post(
+//            	        JSON.stringify(currentTask),
+//            	        function(err, rawData){
+//            	        	//console.log(rawData.response);
+//            	            var transformationResult = JSON.parse(rawData.response);
+//                	  		console.log("Transformation results:");
+//                	  		console.log(transformationResult);
+//            	        }
+//            	    );
+//            	
+//        	});	
+//    	}); 	
+//	});
     
 
     
@@ -123,6 +193,8 @@
 
     
     </script>
+    
+
        		
 	
     </body>
