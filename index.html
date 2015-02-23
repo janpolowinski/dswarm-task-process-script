@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+        <!--<link type="text/css" rel="stylesheet" href="css/main.css"/>-->
+        <script type="text/javascript" src="libs/d3.min.js"></script>
+        <!--<script type="text/javascript" src="settings.js"></script>-->
+    </head>
+    <body>
+    
+    <script type="text/javascript">
+    
+    /* SETTINGS */
+    var baseUrlBackend = "http://localhost:8087/dmp/";
+    
+    /* PARAMETERS */
+    var projectID = "21840fd7-ff93-83ff-6106-18948199f8b6";
+    var inputDatamodelID = "2ff8370e-3825-bf79-f66d-4d67c31eb67c";
+    var outputDatamodelID = "DataModel-cf998267-392a-4d87-a33a-88dd1bffb016";
+    
+    /* GLOBALS */
+    var currentProject;
+    var currentJob;
+    var currentInputDatamodel;
+    var currentOutputDatamodel;
+    
+    /* FUNCTIONS */
+    
+    var buildJob = function(project) {
+    	var job = {};
+    	job.name = "Job derived from project '" + project.name + "'";
+    	job.mappings = project.mappings;
+    	return job;
+    };
+    
+    var buildTask = function(job, inputDatamodel, outputDatamodel) {
+    	var task = {};
+    	task.name = "" +
+    		"Task (based on project '" + job.name + 
+    		"', in: " +	inputDatamodel.id + 
+    		", out: " + outputDatamodel.id;
+    	task.job = job;
+    	task.input_data_model = inputDatamodel;
+    	task.output_data_model = outputDatamodel;
+    	return task;
+    };
+    
+
+
+    	
+    
+    d3.select("body").append("div").text("test");
+
+    
+//    d3.json(baseUrlBackend + "projects/" + projectID, function (error, result) {
+//    	
+//    	console.log(result);
+//		 var projectsEnter = d3.select("#menu")
+//		.append("div")
+//		.selectAll("button")
+//		//.datum(function() { return this.dataset; })
+//	    .data(result.sort(function(a, b) { return d3.ascending(a.id, b.id); }))
+//	    //.data(result.sort(function(a, b) { return d3.ascending(a.defaultGraphicType, b.defaultGraphicType); }))
+//	    .enter()
+//	    .append("div")
+//	    .append("button")
+//		.attr("title","double-click to execute, normal-click to load for editing")
+//	    .attr("ondblclick", function(d){return "loadProject('" + d.id + "','" + d.defaultGraphicType + "')";})
+//		.attr("onclick", function(d){
+//			return "loadExampleValue('http://localhost:8080/semvis/projects/mappingfile/" + d.id + "' , '#projectMappings'); loadExampleValue('http://localhost:8080/semvis/projects/datamodel/" + d.id + "' , '#projectData');"
+//			})
+//	    .text(function(d){return d.id;});    	
+//	});
+    
+    
+    // get project and build job
+    d3.json(baseUrlBackend + "projects/" + projectID, function (error, result) {
+    	
+    	currentProject = result;
+        currentJob = buildJob(currentProject);
+    	//console.log(currentJob);
+    	
+        // get input data model
+        d3.json(baseUrlBackend + "datamodels/" + inputDatamodelID, function (error, result) {
+        	
+            currentInputDatamodel = result;
+        	//console.log(currentInputDatamodel);
+
+            // get output data model
+            d3.json(baseUrlBackend + "datamodels/" + outputDatamodelID, function (error, result) {
+            	
+            	currentOutputDatamodel = result
+            	//console.log(result);
+            	currentTask = buildTask(currentJob, currentInputDatamodel, currentOutputDatamodel);
+            	console.log(currentTask);
+            	
+        	});	
+    	}); 	
+	});
+    
+
+    
+    
+
+    
+
+    
+    </script>
+       		
+	
+    </body>
+</html>
