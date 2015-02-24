@@ -16,6 +16,10 @@
     	<li id="outputDatamodelID"><span>outputDatamodelID: </span><span class="value"> ... </span></li>
     <ul>
     
+    <div style="margin-top:1em">
+    	<button style="color:red" onClick="buildJobAndRunTask()">Run Task</button>
+    </div>
+    
     <script type="text/javascript">
     
     /* SETTINGS */
@@ -64,7 +68,55 @@
     	contents.select("#projectID").select("span.value").text(projectID);
     	contents.select("#inputDatamodelID").select("span.value").text(inputDatamodelID);
     	contents.select("#outputDatamodelID").select("span.value").text(outputDatamodelID);
+    	
+    	//.style("background-color", "black").transition().duration(500).style("background-color", "white");
     }
+    
+    function buildJobAndRunTask() {
+        
+        // get project and build job
+        d3.json(baseUrlBackend + "projects/" + projectID, function (error, result) {
+        	
+        	currentProject = result;
+            currentJob = buildJob(currentProject);
+        	//console.log(currentJob);
+        	
+            // get input data model
+            d3.json(baseUrlBackend + "datamodels/" + inputDatamodelID, function (error, result) {
+            	
+                currentInputDatamodel = result;
+            	//console.log(currentInputDatamodel);
+
+                // get output data model
+                d3.json(baseUrlBackend + "datamodels/" + outputDatamodelID, function (error, result) {
+                	
+                	currentOutputDatamodel = result
+                	//console.log(result);
+                	currentTask = buildTask(currentJob, currentInputDatamodel, currentOutputDatamodel);
+                	//console.log(currentTask);
+                	//console.log(JSON.stringify(currentTask));
+
+                	  	// run task
+                	  	d3.xhr(baseUrlBackend + "tasks?persist=false")
+                	    .header("Content-Type", "application/json;charset=utf-8")
+                	    .header("Accept", "application/json, text/plain, */*")
+                	    .post(
+                	        JSON.stringify(currentTask),
+                	        function(err, rawData){
+                	        	//console.log(rawData.response);
+                	            var transformationResult = JSON.parse(rawData.response);
+                    	  		console.log("Transformation results:");
+                    	  		console.log(transformationResult);
+                	        }
+                	    );
+                	
+            	});	
+        	}); 	
+    	});   
+    }
+    
+    
+    /* PAGE BUILDING */
     
     var contents = d3.select("body");
     
@@ -79,25 +131,26 @@
     		.append("div").append("ul")
     		.selectAll("li.project")
     		.data(result)
+//    		.data(result.sort(function(a, b) { return d3.ascending(a.id, b.id); }))
     		;
     	
     	lis.enter()
     		.append("li")
     		.attr("class", "project")
-    		.text(function(d){ return d.name + " (" + d.uuid + ")"; })
+    		.text(function(d){ return d.name + " " ; })
     		.attr("title", function(d){ return d.description; })
     		;
     	
     	lis.append("button")
     		.attr("onclick", function(d){
-    			return "projectID = '" + d.uuid + "'; console.log('projectID now ' + projectID);";
+    			return "projectID = '" + d.uuid + "'; console.log('projectID now ' + projectID); updateParameterView() ; ";
    				})
 			.text(function(d){return "Create job from this project (" + d.uuid + ")";})
 			;
     	
     });
     
-    // list projects
+    // list datamodels
     d3.json(baseUrlBackend + "datamodels", function (error, result) {
     	
     	contents.append("h2").text("Datamodels");
@@ -111,91 +164,28 @@
     	lis.enter()
     		.append("li")
     		.attr("class", "datamodel")
-    		.text(function(d){ return d.name + " - " + d.description + " (" + d.uuid + ")"; })
+    		.text(function(d){ return d.name + " - " + d.description + " " ; })
     		;
     	
+    	// input
     	lis.append("button")
 		.attr("onclick", function(d){
-			return "inputDatamodelID = '" + d.uuid + "'; console.log('inputDatamodelID now ' + inputDatamodelID);";
+			return "inputDatamodelID = '" + d.uuid + "'; console.log('inputDatamodelID now ' + inputDatamodelID); updateParameterView() ; ";
 				})
 		.text(function(d){return "Use as input (" + d.uuid + ")";})
+		;
+    	
+    	// output
+    	lis.append("button")
+		.attr("onclick", function(d){
+			return "outputDatamodelID = '" + d.uuid + "'; console.log('outputDatamodelID now ' + outputDatamodelID); updateParameterView() ; ";
+				})
+		.text(function(d){return " .. as output";})
 		;
 
     	
     });
 
-    
-//    d3.json(baseUrlBackend + "projects/" + projectID, function (error, result) {
-//    	
-//    	console.log(result);
-//		 var projectsEnter = d3.select("#menu")
-//		.append("div")
-//		.selectAll("button")
-//		//.datum(function() { return this.dataset; })
-//	    .data(result.sort(function(a, b) { return d3.ascending(a.id, b.id); }))
-//	    //.data(result.sort(function(a, b) { return d3.ascending(a.defaultGraphicType, b.defaultGraphicType); }))
-//	    .enter()
-//	    .append("div")
-//	    .append("button")
-//		.attr("title","double-click to execute, normal-click to load for editing")
-//	    .attr("ondblclick", function(d){return "loadProject('" + d.id + "','" + d.defaultGraphicType + "')";})
-//		.attr("onclick", function(d){
-//			return "loadExampleValue('http://localhost:8080/semvis/projects/mappingfile/" + d.id + "' , '#projectMappings'); loadExampleValue('http://localhost:8080/semvis/projects/datamodel/" + d.id + "' , '#projectData');"
-//			})
-//	    .text(function(d){return d.id;});    	
-//	});
-    
-    
-//    // get project and build job
-//    d3.json(baseUrlBackend + "projects/" + projectID, function (error, result) {
-//    	
-//    	currentProject = result;
-//        currentJob = buildJob(currentProject);
-//    	//console.log(currentJob);
-//    	
-//        // get input data model
-//        d3.json(baseUrlBackend + "datamodels/" + inputDatamodelID, function (error, result) {
-//        	
-//            currentInputDatamodel = result;
-//        	//console.log(currentInputDatamodel);
-//
-//            // get output data model
-//            d3.json(baseUrlBackend + "datamodels/" + outputDatamodelID, function (error, result) {
-//            	
-//            	currentOutputDatamodel = result
-//            	//console.log(result);
-//            	currentTask = buildTask(currentJob, currentInputDatamodel, currentOutputDatamodel);
-//            	//console.log(currentTask);
-//            	//console.log(JSON.stringify(currentTask));
-//
-//            	  	// run task
-//            	  	d3.xhr(baseUrlBackend + "tasks?persist=false")
-//            	    .header("Content-Type", "application/json;charset=utf-8")
-//            	    .post(
-//            	        JSON.stringify(currentTask),
-//            	        function(err, rawData){
-//            	        	//console.log(rawData.response);
-//            	            var transformationResult = JSON.parse(rawData.response);
-//                	  		console.log("Transformation results:");
-//                	  		console.log(transformationResult);
-//            	        }
-//            	    );
-//            	
-//        	});	
-//    	}); 	
-//	});
-    
-
-    
-    
-
-    
-
-    
     </script>
-    
-
-       		
-	
     </body>
 </html>
