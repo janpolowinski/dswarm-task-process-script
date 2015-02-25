@@ -4,7 +4,8 @@
         <meta charset="utf-8">
         <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
         <!--<link type="text/css" rel="stylesheet" href="css/main.css"/>-->
-        <script type="text/javascript" src="libs/d3.min.js"></script>
+        <!--<script type="text/javascript" src="libs/d3.min.js"></script>-->
+        <script src="http://d3js.org/d3.v3.min.js"></script>
         <!--<script type="text/javascript" src="settings.js"></script>-->
     </head>
     <body>
@@ -17,18 +18,21 @@
     <ul>
     
     <div style="margin-top:1em">
-    	<button style="color:red" onClick="buildJobAndRunTask()">Run Task</button>
+    	<button style="color:green" onClick="buildJobAndRunTask(false)">Build job from project and run task (Preview)</button>
+    	<button style="color:red" onClick="buildJobAndRunTask(true)">Build job from project and run task</button>
+    	<button style="color:grey" onClick="exportAsRDF()">Export output model as RDF (does not yet work)</button>
     </div>
     
     <script type="text/javascript">
     
     /* SETTINGS */
-    var baseUrlBackend = "http://localhost:8087/dmp/";
+//  var baseUrlBackend = "http://127.0.0.1:8087/dmp/";
+    var baseUrlBackend = "http://sdvdmpdev.slub-dresden.de/dmp/";
     
     /* PARAMETERS */
-    var projectID = "21840fd7-ff93-83ff-6106-18948199f8b6";
-    var inputDatamodelID = "2ff8370e-3825-bf79-f66d-4d67c31eb67c";
-    var outputDatamodelID = "DataModel-cf998267-392a-4d87-a33a-88dd1bffb016";
+    var projectID = "";
+    var inputDatamodelID = "";
+    var outputDatamodelID = "";
     
     var taskConfig = {};
     taskConfig.projectID = projectID;
@@ -65,14 +69,14 @@
     
     function updateParameterView() {
     	
-    	contents.select("#projectID").select("span.value").text(projectID);
-    	contents.select("#inputDatamodelID").select("span.value").text(inputDatamodelID);
-    	contents.select("#outputDatamodelID").select("span.value").text(outputDatamodelID);
+    	contents.select("#projectID").select(".value").text(projectID);
+    	contents.select("#inputDatamodelID").select(".value").text(inputDatamodelID);
+    	contents.select("#outputDatamodelID").select(".value").text(outputDatamodelID);
     	
     	//.style("background-color", "black").transition().duration(500).style("background-color", "white");
     }
     
-    function buildJobAndRunTask() {
+    function buildJobAndRunTask(persist) {
         
         // get project and build job
         d3.json(baseUrlBackend + "projects/" + projectID, function (error, result) {
@@ -97,7 +101,7 @@
                 	//console.log(JSON.stringify(currentTask));
 
                 	  	// run task
-                	  	d3.xhr(baseUrlBackend + "tasks?persist=false")
+                	  	d3.xhr(baseUrlBackend + "tasks?persist=" + persist)
                 	    .header("Content-Type", "application/json;charset=utf-8")
                 	    .header("Accept", "application/json, text/plain, */*")
                 	    .post(
@@ -113,6 +117,36 @@
             	});	
         	}); 	
     	});   
+    }
+    
+    function exportAsRDF() {
+    	
+        // export: http://127.0.0.1:8087/dmp/datamodels/DataModel-cf998267-392a-4d87-a33a-88dd1bffb016/export?format=application%2Frdf%2Bxml
+
+//        d3.json(baseUrlBackend + "datamodels/" + outputDatamodelID + "/export?format=application/rdf+xml", function (error, rdfExport) {
+//        	console.log(rdfExport);
+//        })
+//        .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+//        ; 
+        
+	  	// run export 
+	  	d3.xhr(baseUrlBackend + "datamodels/" + outputDatamodelID + "/export?format=application/rdf+xml")
+	    //.header("Content-Type", "application/json;charset=utf-8")
+//	  	.header("Content-Disposition", "attachment; filename*=UTF-8''rdf_export.rdf") 
+	    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+//	    .header("Accept", "application/octet-stream")
+	    .header("Connection", "keep-alive")
+//	    .header("X-Requested-With", "XMLHttpRequest")
+//	    .header("Referer","http://localhost:9999/")
+	    .get(
+	        function(err, rawData){
+	        	console.log(err);
+	        	console.log(rawData);
+//	            var transformationResult = JSON.parse(rawData.response);
+//    	  		console.log("Export results:");
+//    	  		console.log(transformationResult);
+	        }
+	    );
     }
     
     
@@ -138,14 +172,14 @@
     		.append("li")
     		.attr("class", "project")
     		.text(function(d){ return d.name + " " ; })
-    		.attr("title", function(d){ return d.description; })
+    		.attr("title", function(d){ return d.description + " (" + d.uuid + ")"; })
     		;
     	
     	lis.append("button")
     		.attr("onclick", function(d){
-    			return "projectID = '" + d.uuid + "'; console.log('projectID now ' + projectID); updateParameterView() ; ";
+    			return "projectID = '" + d.uuid + "'; updateParameterView() ; ";
    				})
-			.text(function(d){return "Create job from this project (" + d.uuid + ")";})
+			.text(function(d){return "Use for job" ;})
 			;
     	
     });
@@ -165,20 +199,21 @@
     		.append("li")
     		.attr("class", "datamodel")
     		.text(function(d){ return d.name + " - " + d.description + " " ; })
+    		.attr("title", function(d){ return d.uuid; })
     		;
     	
     	// input
     	lis.append("button")
 		.attr("onclick", function(d){
-			return "inputDatamodelID = '" + d.uuid + "'; console.log('inputDatamodelID now ' + inputDatamodelID); updateParameterView() ; ";
+			return "inputDatamodelID = '" + d.uuid + "'; updateParameterView() ; ";
 				})
-		.text(function(d){return "Use as input (" + d.uuid + ")";})
+		.text(function(d){return "Use as input";})
 		;
     	
     	// output
     	lis.append("button")
 		.attr("onclick", function(d){
-			return "outputDatamodelID = '" + d.uuid + "'; console.log('outputDatamodelID now ' + outputDatamodelID); updateParameterView() ; ";
+			return "outputDatamodelID = '" + d.uuid + "'; updateParameterView() ; ";
 				})
 		.text(function(d){return " .. as output";})
 		;
