@@ -4,13 +4,17 @@
         <meta charset="utf-8">
         <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
         <!--<link type="text/css" rel="stylesheet" href="css/main.css"/>-->
-        <!--<script type="text/javascript" src="libs/d3.min.js"></script>-->
-        <script src="http://d3js.org/d3.v3.min.js"></script>
+        <script type="text/javascript" src="libs/d3.min.js"></script>
+        <!--<script src="http://d3js.org/d3.v3.min.js"></script>-->
         <!--<script type="text/javascript" src="settings.js"></script>-->
+        <style type="text/css">
+        	body {font-family: "Arial"; font-size: 0.9em;}
+        	.currentSelection { font-weight: bold ; color: red ; }
+        </style>
     </head>
     <body>
     
-    <h1>Current Task Configuration</h1>
+    <h2>Current Task Configuration</h1>
     <ul id="taskConfigView">
     	<li id="projectID"><span>projectID: </span><span class="value"> ... </span></li>
     	<li id="inputDatamodelID"><span>inputDatamodelID: </span><span class="value"> ... </span></li>
@@ -26,8 +30,8 @@
     <script type="text/javascript">
     
     /* SETTINGS */
-//  var baseUrlBackend = "http://127.0.0.1:8087/dmp/";
-    var baseUrlBackend = "http://sdvdmpdev.slub-dresden.de/dmp/";
+	var baseUrlBackend = "http://127.0.0.1:8087/dmp/";
+//    var baseUrlBackend = "http://sdvdmpdev.slub-dresden.de/dmp/";
     
     /* PARAMETERS */
     var projectID = "";
@@ -149,6 +153,10 @@
 	    );
     }
     
+    function setCurrent(inputElement, className) {
+    	d3.select("."+className).classed(className + " " + "currentSelection",false);
+    	d3.select(inputElement.parentNode).classed(className + " " + "currentSelection",true);
+    }
     
     /* PAGE BUILDING */
     
@@ -177,7 +185,7 @@
     	
     	lis.append("button")
     		.attr("onclick", function(d){
-    			return "projectID = '" + d.uuid + "'; updateParameterView() ; ";
+    			return "setCurrent(this, 'project'); projectID = '" + d.uuid + "'; updateParameterView() ; ";
    				})
 			.text(function(d){return "Use for job" ;})
 			;
@@ -198,24 +206,26 @@
     	lis.enter()
     		.append("li")
     		.attr("class", "datamodel")
-    		.text(function(d){ return d.name + " - " + d.description + " " ; })
+    		.text(function(d){ return d.description + " - " + d.name + " " ; })
     		.attr("title", function(d){ return d.uuid; })
     		;
     	
     	// input
-    	lis.append("button")
+    	lis.filter(function(d){return d.uuid.search("DataModel")==-1 ; })
+    	.append("button")
 		.attr("onclick", function(d){
-			return "inputDatamodelID = '" + d.uuid + "'; updateParameterView() ; ";
+			return "setCurrent(this, 'input') ; inputDatamodelID = '" + d.uuid + "'; updateParameterView() ; ";
 				})
 		.text(function(d){return "Use as input";})
 		;
     	
     	// output
-    	lis.append("button")
+    	lis.filter(function(d){return d.uuid.search("DataModel")!=-1 ; })
+		.append("button")
 		.attr("onclick", function(d){
-			return "outputDatamodelID = '" + d.uuid + "'; updateParameterView() ; ";
+			return "setCurrent(this, 'output'); outputDatamodelID = '" + d.uuid + "'; updateParameterView() ; ";
 				})
-		.text(function(d){return " .. as output";})
+		.text(function(d){return "Use as output";})
 		;
 
     	
