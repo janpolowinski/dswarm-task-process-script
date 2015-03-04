@@ -14,7 +14,7 @@
     </head>
     <body>
     
-    <h2>Current Task Configuration</h1>
+    <h2>Current Task Configuration</h2>
     <ul id="taskConfigView">
     	<li id="projectID"><span>projectID: </span><span class="value"> ... </span></li>
     	<li id="inputDatamodelID"><span>inputDatamodelID: </span><span class="value"> ... </span></li>
@@ -25,6 +25,12 @@
     	<button style="color:green" onClick="buildJobAndRunTask(false)">Build job from project and run task (Preview)</button>
     	<button style="color:red" onClick="buildJobAndRunTask(true)">Build job from project and run task</button>
     	<button style="color:grey" onClick="exportAsRDF()">Export output model as RDF (does not yet work)</button>
+    </div>
+
+    <h2>Task metrics</h2>
+    <div style="margin-top:1em">
+	    <ol id="metricsView">
+	    </ol>
     </div>
     
     <script type="text/javascript">
@@ -48,6 +54,7 @@
     var currentJob;
     var currentInputDatamodel;
     var currentOutputDatamodel;
+    var taskRequestCount = 0;
     
     /* FUNCTIONS */
     
@@ -98,11 +105,14 @@
                 // get output data model
                 d3.json(baseUrlBackend + "datamodels/" + outputDatamodelID, function (error, result) {
                 	
-                	currentOutputDatamodel = result
+                	currentOutputDatamodel = result;
                 	//console.log(result);
                 	currentTask = buildTask(currentJob, currentInputDatamodel, currentOutputDatamodel);
                 	//console.log(currentTask);
                 	//console.log(JSON.stringify(currentTask));
+                	
+                		// metrics
+            			performance.mark('mark_start_post_task');
 
                 	  	// run task
                 	  	d3.xhr(baseUrlBackend + "tasks?persist=" + persist)
@@ -111,7 +121,25 @@
                 	    .post(
                 	        JSON.stringify(currentTask),
                 	        function(err, rawData){
-                	        	//console.log(rawData.response);
+                	        	
+                	        	// metrics
+                        		performance.mark('mark_end_post_task');
+                        		taskRequestCount++;
+                        		performance.measure('measure_post_task_transformation_from_' + currentInputDatamodel.name + "_" + taskRequestCount, 'mark_start_post_task', 'mark_end_post_task');
+                        		
+                        		var items = window.performance.getEntriesByType('measure');
+//								for (var i = 0; i < items.length; ++i) {
+//								  var req = items[i];
+//								  console.log('Process step ' + req.name + ' took ' + formatedTime(req.duration));
+//								}
+								
+								updateMetricsList(items);
+                        		
+//                        	    var t0 = performance.now();
+//                        	    var t1 = performance.now();
+//                        	    console.log("Call to doSomething took " + (t1 - t0) + " milliseconds.")
+                	        	
+                        		//console.log(rawData.response);
                 	            var transformationResult = JSON.parse(rawData.response);
                     	  		console.log("Transformation results:");
                     	  		console.log(transformationResult);
@@ -153,9 +181,27 @@
 	    );
     }
     
+    function updateMetricsList(updatedMeasurements) {
+    	
+    	d3.select("#metricsView").selectAll("li").data(updatedMeasurements).enter().append("li")
+    		.text(function(d) {console.log(d.duration); return d.name + ": " + formatedTime(d.duration) ; });
+    }
+    
     function setCurrent(inputElement, className) {
     	d3.select("."+className).classed(className + " " + "currentSelection",false);
     	d3.select(inputElement.parentNode).classed(className + " " + "currentSelection",true);
+    }
+    
+    function formatedTime(timeInMs) {
+	    var mydate = new Date(timeInMs);
+	    var hours = mydate.getUTCHours();
+	    var minutes = mydate.getUTCMinutes();
+	    var seconds = mydate.getUTCSeconds();
+	    var formatedTime = "";
+	    if (hours>0) formatedTime+=hours + "hours, ";
+	    if (minutes>0) formatedTime+=minutes + " min and ";
+	    if (seconds>0) {formatedTime+=seconds +" sec"} else {formatedTime = "< 1s"};
+	    return formatedTime;
     }
     
     /* PAGE BUILDING */
