@@ -14,6 +14,12 @@
     </head>
     <body>
     
+    <h2>Process Step Log+Metrics</h2>
+    <div style="margin-top:1em">
+	    <ol id="metricsView">
+	    </ol>
+    </div>
+    
     <h2>Current Task Configuration</h2>
     <ul id="taskConfigView">
     	<li id="projectID"><span>projectID: </span><span class="value"> ... </span></li>
@@ -24,13 +30,7 @@
     <div style="margin-top:1em">
     	<button style="color:green" onClick="buildJobAndRunTask(false)">Build job from project and run task (Preview)</button>
     	<button style="color:red" onClick="buildJobAndRunTask(true)">Build job from project and run task</button>
-    	<button style="color:grey" onClick="exportAsRDF()">Export output model as RDF (does not yet work)</button>
-    </div>
-
-    <h2>Task metrics</h2>
-    <div style="margin-top:1em">
-	    <ol id="metricsView">
-	    </ol>
+    	<button style="color:grey" onClick="exportAsRDF(outputDatamodelID)">Export output model as RDF/XML</button>
     </div>
     
     <script type="text/javascript">
@@ -55,6 +55,7 @@
     var currentInputDatamodel;
     var currentOutputDatamodel;
     var taskRequestCount = 0;
+    var exportRequestCount = 0;
     
     /* FUNCTIONS */
     
@@ -83,8 +84,6 @@
     	contents.select("#projectID").select(".value").text(projectID);
     	contents.select("#inputDatamodelID").select(".value").text(inputDatamodelID);
     	contents.select("#outputDatamodelID").select(".value").text(outputDatamodelID);
-    	
-    	//.style("background-color", "black").transition().duration(500).style("background-color", "white");
     }
     
     function buildJobAndRunTask(persist) {
@@ -126,14 +125,8 @@
                         		performance.mark('mark_end_post_task');
                         		taskRequestCount++;
                         		performance.measure('measure_post_task_transformation_from_' + currentInputDatamodel.name + "_" + taskRequestCount, 'mark_start_post_task', 'mark_end_post_task');
-                        		
-                        		var items = window.performance.getEntriesByType('measure');
-//								for (var i = 0; i < items.length; ++i) {
-//								  var req = items[i];
-//								  console.log('Process step ' + req.name + ' took ' + formatedTime(req.duration));
-//								}
-								
-								updateMetricsList(items);
+
+								updateMetricsList();
                         		
 //                        	    var t0 = performance.now();
 //                        	    var t1 = performance.now();
@@ -151,24 +144,51 @@
     	});   
     }
     
-    function exportAsRDF() {
-	  	d3.xhr(baseUrlBackend + "datamodels/" + outputDatamodelID + "/export?format=" + encodeURIComponent("application/rdf+xml"))
+    function exportAsRDF(datamodelID) {
+    	
+		// metrics
+		performance.mark('mark_start_export');
+    	
+	  	d3.xhr(baseUrlBackend + "datamodels/" + datamodelID + "/export?format=" + encodeURIComponent("application/rdf+xml"))
 //	  	d3.xhr(baseUrlBackend + "datamodels/" + outputDatamodelID + "/export")
 	    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
 //	    .header("Accept", "application/rdf+xml")
 //	    .header("Accept", "application/octet-stream")
 	    .get(
 	        function(err, rawData) {
+	        	
+	        	// metrics
+        		performance.mark('mark_end_export');
+        		taskRequestCount++;
+        		performance.measure('measure_export_from_' + datamodelID + "_" + exportRequestCount, 'mark_start_export', 'mark_end_export');
+        		updateMetricsList();
+        		
 //	        	console.log(err);
     	  		console.log(rawData.response);
+    	  		
+//    	  		http://www.html5rocks.com/en/tutorials/file/filesystem/ and https://developer.mozilla.org/en-US/docs/Using_files_from_web_applications 
+//    	  		 if (rawData.status === 200) {
+//    	  	        var blob = new Blob([rawData.response], {type: "application/rdf+xml"});
+//    	  	        var objectUrl = URL.createObjectURL(blob);
+//    	  	        window.open(objectUrl);
+//    	  	    }
 	        }
 	    );
     }
     
-    function updateMetricsList(updatedMeasurements) {
+    function updateMetricsList() {
+    	
+		var updatedMeasurements = window.performance.getEntriesByType('measure');
+		
+//		for (var i = 0; i < items.length; ++i) {
+//		  var req = items[i];
+//		  console.log('Process step ' + req.name + ' took ' + formatedTime(req.duration));
+//		}
     	
     	d3.select("#metricsView").selectAll("li").data(updatedMeasurements).enter().append("li")
-    		.text(function(d) {console.log(d.duration); return d.name + ": " + formatedTime(d.duration) ; });
+    		.text(function(d) {console.log(d.duration); return d.name + ": " + formatedTime(d.duration) ; })
+    		.call(highlightTemporarily);
+    		;
     }
     
     function setCurrent(inputElement, className) {
@@ -186,6 +206,10 @@
 	    if (minutes>0) formatedTime+=minutes + " min and ";
 	    if (seconds>0) {formatedTime+=seconds +" sec"} else {formatedTime = "< 1s"};
 	    return formatedTime;
+    }
+    
+    function highlightTemporarily(selection) {
+    	selection.style("background-color", "lightgreen").transition().duration(1000).style("background-color", "white");
     }
     
     /* PAGE BUILDING */
@@ -256,6 +280,15 @@
 			return "setCurrent(this, 'output'); outputDatamodelID = '" + d.uuid + "'; updateParameterView() ; ";
 				})
 		.text(function(d){return "Use as output";})
+		;
+    	
+    	// export
+    	lis
+		.append("button")
+		.attr("onclick", function(d){
+			return "exportAsRDF('" + d.uuid + "') ; ";
+				})
+		.text(function(d){return "Export as RDF/XML";})
 		;
 
     	
