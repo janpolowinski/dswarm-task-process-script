@@ -25,6 +25,7 @@
     	<li id="projectID"><span>projectID: </span><span class="value"> ... </span></li>
     	<li id="inputDatamodelID"><span>inputDatamodelID: </span><span class="value"> ... </span></li>
     	<li id="outputDatamodelID"><span>outputDatamodelID: </span><span class="value"> ... </span></li>
+    	<li id="configurationID"><span>configurationID: </span><span class="value"> ... </span></li>
     <ul>
     
     <div style="margin-top:1em">
@@ -43,6 +44,7 @@
     var projectID = "";
     var inputDatamodelID = "";
     var outputDatamodelID = "";
+    var configurationID = "";
     
     var taskConfig = {};
     taskConfig.projectID = projectID;
@@ -54,8 +56,10 @@
     var currentJob;
     var currentInputDatamodel;
     var currentOutputDatamodel;
+    var currentConfig;
     var taskRequestCount = 0;
     var exportRequestCount = 0;
+    var ingestRequestCount = 0;
     
     /* FUNCTIONS */
     
@@ -84,6 +88,7 @@
     	contents.select("#projectID").select(".value").text(projectID);
     	contents.select("#inputDatamodelID").select(".value").text(inputDatamodelID);
     	contents.select("#outputDatamodelID").select(".value").text(outputDatamodelID);
+    	contents.select("#configurationID").select(".value").text(configurationID);
     }
     
     function buildJobAndRunTask(persist) {
@@ -176,6 +181,58 @@
 	    );
     }
     
+    
+    function ingestAsNewDataModel(resourceID) {
+    	
+    	console.log("Building datamodel from resource " + resourceID + " using the default config (XML/record) ... ");
+
+        // get resource
+        d3.json(baseUrlBackend + "resources/" + resourceID, function (error, resource) {
+
+//        	console.log("resource: " + resource.name); 
+        	
+        		// get config
+        		d3.json(baseUrlBackend + "configurations/" + configurationID, function (error, configuration) {
+
+//            	console.log("config: " + configuration.name); 
+
+		    	var configuredDatamodel = {
+		    			"data_resource": resource ,
+		    			"name" : "some name",
+		    			"description" : "some desc",
+		    			"configuration" : configuration
+		    		};
+		    	
+//		    	console.log("configuredDatamodel:");  	console.log(configuredDatamodel); 
+		    	
+				// metrics
+				performance.mark('mark_start_ingest');
+		    	
+			  	d3.xhr(baseUrlBackend + "datamodels")
+			    .header("Content-Type", "application/json;charset=utf-8")
+			    .header("Accept", "application/json, text/plain, */*")
+			    .post(
+			        JSON.stringify(configuredDatamodel),
+			        function(err, rawData){
+			        	console.log(err);
+//		        		console.log(rawData.response);
+			        	
+						performance.mark('mark_end_ingest');
+						ingestRequestCount++;
+		        		performance.measure('measure_ingest_from_' + resource.name + "_" + ingestRequestCount, 'mark_start_ingest', 'mark_end_ingest');
+		        		updateMetricsList();
+						
+			            var configurationResult = JSON.parse(rawData.response);
+		    	  		console.log("configurationResult:");
+		    	  		console.log(configurationResult);
+			        }
+			    );
+		  	
+	    	});
+        		
+    	});
+    }
+    
     function updateMetricsList() {
     	
 		var updatedMeasurements = window.performance.getEntriesByType('measure');
@@ -217,6 +274,61 @@
     var contents = d3.select("body");
     
     updateParameterView();
+    
+    
+    // list resources
+    d3.json(baseUrlBackend + "resources", function (error, result) {
+    	
+    	contents.append("h2").text("Resources");
+    	
+    	var lis = contents
+    		.append("div").append("ul")
+    		.selectAll("li.resource")
+    		.data(result)
+    		;
+    	
+    	lis.enter()
+    		.append("li")
+    		.attr("class", "resource")
+    		.text(function(d){ return d.name + " " ; })
+    		.attr("title", function(d){ return d.description + " (" + d.uuid + ")"; })
+    		;
+    	
+    	lis.append("button")
+    		.attr("onclick", function(d){
+    			return "setCurrent(this, 'resource'); ingestAsNewDataModel('" + d.uuid + "');";
+   				})
+			.text(function(d){return "Configure" ;})
+			;
+    	
+    });
+    
+    // list configurations
+    d3.json(baseUrlBackend + "configurations", function (error, result) {
+    	
+    	contents.append("h2").text("Configurations");
+    	
+    	var lis = contents
+    		.append("div").append("ul")
+    		.selectAll("li.configuration")
+    		.data(result)
+    		;
+    	
+    	lis.enter()
+    		.append("li")
+    		.attr("class", "configuration")
+    		.text(function(d){ return d.name + " " ; })
+    		.attr("title", function(d){ return d.description + " (" + d.uuid + ")"; })
+    		;
+    	
+    	lis.append("button")
+    		.attr("onclick", function(d){
+    			return "setCurrent(this, 'configuration'); configurationID = '" + d.uuid + "'; updateParameterView() ; ";
+   				})
+			.text(function(d){return "Use for ingest" ;})
+			;
+    	
+    });
     
     // list projects
     d3.json(baseUrlBackend + "projects", function (error, result) {
