@@ -152,31 +152,15 @@
     }
     
     function exportAsRDF() {
-    	
-        // export: http://127.0.0.1:8087/dmp/datamodels/DataModel-cf998267-392a-4d87-a33a-88dd1bffb016/export?format=application%2Frdf%2Bxml
-
-//        d3.json(baseUrlBackend + "datamodels/" + outputDatamodelID + "/export?format=application/rdf+xml", function (error, rdfExport) {
-//        	console.log(rdfExport);
-//        })
-//        .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-//        ; 
-        
-	  	// run export 
-	  	d3.xhr(baseUrlBackend + "datamodels/" + outputDatamodelID + "/export?format=application/rdf+xml")
-	    //.header("Content-Type", "application/json;charset=utf-8")
-//	  	.header("Content-Disposition", "attachment; filename*=UTF-8''rdf_export.rdf") 
+	  	d3.xhr(baseUrlBackend + "datamodels/" + outputDatamodelID + "/export?format=" + encodeURIComponent("application/rdf+xml"))
+//	  	d3.xhr(baseUrlBackend + "datamodels/" + outputDatamodelID + "/export")
 	    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+//	    .header("Accept", "application/rdf+xml")
 //	    .header("Accept", "application/octet-stream")
-	    .header("Connection", "keep-alive")
-//	    .header("X-Requested-With", "XMLHttpRequest")
-//	    .header("Referer","http://localhost:9999/")
 	    .get(
-	        function(err, rawData){
-	        	console.log(err);
-	        	console.log(rawData);
-//	            var transformationResult = JSON.parse(rawData.response);
-//    	  		console.log("Export results:");
-//    	  		console.log(transformationResult);
+	        function(err, rawData) {
+//	        	console.log(err);
+    	  		console.log(rawData.response);
 	        }
 	    );
     }
