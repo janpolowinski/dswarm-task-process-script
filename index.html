@@ -8,30 +8,38 @@
         <!--<script src="http://d3js.org/d3.v3.min.js"></script>-->
         <!--<script type="text/javascript" src="settings.js"></script>-->
         <style type="text/css">
-        	body {font-family: "Arial"; font-size: 0.9em;}
+        	body { font-family: "Arial"; font-size: 0.9em; }
         	.currentSelection { font-weight: bold ; color: red ; }
+        	#metricsView { position:absolute; top:0px; right:0px; margin:1em; background-color:white ; }
         </style>
     </head>
     <body>
     
-    <h2>Process Step Log+Metrics</h2>
-    <div style="margin-top:1em">
-	    <ol id="metricsView">
-	    </ol>
-    </div>
+    <div id="configurationsView">
+		<h2>Configurations</h2>
+		<div id="configurationID"><span>current: </span><span class="value"> ... </span></div>
+	</div>
+	<div id="resourcesView"><h2>Resources</h2></div>
     
-    <h2>Current Task Configuration</h2>
+    <h2>Current Transform (Task) Configuration</h2>
     <ul id="taskConfigView">
     	<li id="projectID"><span>projectID: </span><span class="value"> ... </span></li>
     	<li id="inputDatamodelID"><span>inputDatamodelID: </span><span class="value"> ... </span></li>
     	<li id="outputDatamodelID"><span>outputDatamodelID: </span><span class="value"> ... </span></li>
-    	<li id="configurationID"><span>configurationID: </span><span class="value"> ... </span></li>
-    <ul>
-    
+    </ul>
     <div style="margin-top:1em">
     	<button style="color:green" onClick="buildJobAndRunTask(false)">Build job from project and run task (Preview)</button>
     	<button style="color:red" onClick="buildJobAndRunTask(true)">Build job from project and run task</button>
     	<button style="color:grey" onClick="exportAsRDF(outputDatamodelID)">Export output model as RDF/XML</button>
+    </div>
+
+    <div id="projectsView"><h2>Projects</h2></div>
+    <div id="datamodelsView"><h2>Datamodels</h2></div>
+
+    <div id="metricsView">
+    	<h2>Process Step Log+Metrics</h2>
+	    <ol id="metricsList" style="font-size:0.75em;">
+	    </ol>
     </div>
     
     <script type="text/javascript">
@@ -57,7 +65,7 @@
     var currentInputDatamodel;
     var currentOutputDatamodel;
     var currentConfig;
-    var taskRequestCount = 0;
+    var transformRequestCount = 0;
     var exportRequestCount = 0;
     var ingestRequestCount = 0;
     
@@ -84,7 +92,6 @@
     
     
     function updateParameterView() {
-    	
     	contents.select("#projectID").select(".value").text(projectID);
     	contents.select("#inputDatamodelID").select(".value").text(inputDatamodelID);
     	contents.select("#outputDatamodelID").select(".value").text(outputDatamodelID);
@@ -98,25 +105,21 @@
         	
         	currentProject = result;
             currentJob = buildJob(currentProject);
-        	//console.log(currentJob);
         	
             // get input data model
             d3.json(baseUrlBackend + "datamodels/" + inputDatamodelID, function (error, result) {
             	
                 currentInputDatamodel = result;
-            	//console.log(currentInputDatamodel);
 
                 // get output data model
                 d3.json(baseUrlBackend + "datamodels/" + outputDatamodelID, function (error, result) {
                 	
                 	currentOutputDatamodel = result;
-                	//console.log(result);
                 	currentTask = buildTask(currentJob, currentInputDatamodel, currentOutputDatamodel);
-                	//console.log(currentTask);
-                	//console.log(JSON.stringify(currentTask));
                 	
                 		// metrics
-            			performance.mark('mark_start_post_task');
+	                	var transformNumber = transformRequestCount++;
+	                	performance.mark(createStartMark("transformation",transformNumber));
 
                 	  	// run task
                 	  	d3.xhr(baseUrlBackend + "tasks?persist=" + persist)
@@ -127,23 +130,15 @@
                 	        function(err, rawData){
                 	        	
                 	        	// metrics
-                        		performance.mark('mark_end_post_task');
-                        		taskRequestCount++;
-                        		performance.measure('measure_post_task_transformation_from_' + currentInputDatamodel.name + "_" + taskRequestCount, 'mark_start_post_task', 'mark_end_post_task');
-
+                	        	performance.mark(createEndMark("transformation",transformNumber));
+        		        		performance.measure(createMeasure("transformation",transformNumber,currentInputDatamodel.name), createStartMark("transformation",transformNumber), createEndMark("transformation",transformNumber));
 								updateMetricsList();
-                        		
-//                        	    var t0 = performance.now();
-//                        	    var t1 = performance.now();
-//                        	    console.log("Call to doSomething took " + (t1 - t0) + " milliseconds.")
                 	        	
-                        		//console.log(rawData.response);
                 	            var transformationResult = JSON.parse(rawData.response);
                     	  		console.log("Transformation results:");
                     	  		console.log(transformationResult);
-                	        }
-                	    );
-                	
+                	    });
+
             	});	
         	}); 	
     	});   
@@ -152,10 +147,10 @@
     function exportAsRDF(datamodelID) {
     	
 		// metrics
-		performance.mark('mark_start_export');
+    	var exportNumber = exportRequestCount++;
+    	performance.mark(createStartMark("export",exportNumber));
     	
 	  	d3.xhr(baseUrlBackend + "datamodels/" + datamodelID + "/export?format=" + encodeURIComponent("application/rdf+xml"))
-//	  	d3.xhr(baseUrlBackend + "datamodels/" + outputDatamodelID + "/export")
 	    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
 //	    .header("Accept", "application/rdf+xml")
 //	    .header("Accept", "application/octet-stream")
@@ -163,13 +158,11 @@
 	        function(err, rawData) {
 	        	
 	        	// metrics
-        		performance.mark('mark_end_export');
-        		taskRequestCount++;
-        		performance.measure('measure_export_from_' + datamodelID + "_" + exportRequestCount, 'mark_start_export', 'mark_end_export');
+        		performance.mark(createEndMark("export",exportNumber));
+        		performance.measure(createMeasure("export",exportNumber,datamodelID), createStartMark("export",exportNumber), createEndMark("export",exportNumber));
         		updateMetricsList();
         		
-//	        	console.log(err);
-    	  		console.log(rawData.response);
+//	        	console.log(err); console.log(rawData.response);
     	  		
 //    	  		http://www.html5rocks.com/en/tutorials/file/filesystem/ and https://developer.mozilla.org/en-US/docs/Using_files_from_web_applications 
 //    	  		 if (rawData.status === 200) {
@@ -188,25 +181,20 @@
 
         // get resource
         d3.json(baseUrlBackend + "resources/" + resourceID, function (error, resource) {
-
-//        	console.log("resource: " + resource.name); 
         	
-        		// get config
-        		d3.json(baseUrlBackend + "configurations/" + configurationID, function (error, configuration) {
-
-//            	console.log("config: " + configuration.name); 
+    		// get config
+    		d3.json(baseUrlBackend + "configurations/" + configurationID, function (error, configuration) {
 
 		    	var configuredDatamodel = {
 		    			"data_resource": resource ,
-		    			"name" : "some name",
-		    			"description" : "some desc",
+		    			"name" : resource.name,
+		    			"description" : resource.description,
 		    			"configuration" : configuration
 		    		};
 		    	
-//		    	console.log("configuredDatamodel:");  	console.log(configuredDatamodel); 
-		    	
 				// metrics
-				performance.mark('mark_start_ingest');
+	        	var ingestNumber = ingestRequestCount++;
+				performance.mark(createStartMark("ingest",ingestNumber));
 		    	
 			  	d3.xhr(baseUrlBackend + "datamodels")
 			    .header("Content-Type", "application/json;charset=utf-8")
@@ -214,12 +202,11 @@
 			    .post(
 			        JSON.stringify(configuredDatamodel),
 			        function(err, rawData){
-			        	console.log(err);
-//		        		console.log(rawData.response);
-			        	
-						performance.mark('mark_end_ingest');
-						ingestRequestCount++;
-		        		performance.measure('measure_ingest_from_' + resource.name + "_" + ingestRequestCount, 'mark_start_ingest', 'mark_end_ingest');
+//			        	console.log(err); console.log(rawData.response);
+
+			        	// metrics
+						performance.mark(createEndMark("ingest",ingestNumber));
+		        		performance.measure(createMeasure("ingest",ingestNumber,resource.name), createStartMark("ingest",ingestNumber), createEndMark("ingest",ingestNumber));
 		        		updateMetricsList();
 						
 			            var configurationResult = JSON.parse(rawData.response);
@@ -227,9 +214,7 @@
 		    	  		console.log(configurationResult);
 			        }
 			    );
-		  	
-	    	});
-        		
+	    	});	
     	});
     }
     
@@ -237,14 +222,15 @@
     	
 		var updatedMeasurements = window.performance.getEntriesByType('measure');
 		
-//		for (var i = 0; i < items.length; ++i) {
-//		  var req = items[i];
+//		console.log(updatedMeasurements);
+//		for (var i = 0; i < updatedMeasurements.length; ++i) {
+//		  var req = updatedMeasurements[i];
 //		  console.log('Process step ' + req.name + ' took ' + formatedTime(req.duration));
 //		}
     	
-    	d3.select("#metricsView").selectAll("li").data(updatedMeasurements).enter().append("li")
+    	d3.select("#metricsList").selectAll("li").data(updatedMeasurements, function(d){return d.startTime}).enter().append("li")
     		.text(function(d) {console.log(d.duration); return d.name + ": " + formatedTime(d.duration) ; })
-    		.call(highlightTemporarily);
+    		.call(highlightTemporarily)
     		;
     }
     
@@ -265,32 +251,33 @@
 	    return formatedTime;
     }
     
+    function createStartMark(eventType,count) { return "start_" + eventType + "_" + count }
+    function createEndMark(eventType,count) { return "end_" + eventType + "_" + count }
+    function createMeasure(eventType,count,descriptor) {return "" + eventType + " (" + descriptor + ") # " + count}
+    
     function highlightTemporarily(selection) {
     	selection.style("background-color", "lightgreen").transition().duration(1000).style("background-color", "white");
     }
     
+    function isInternalModel(model){ return model.configuration == null ; }
+    
     /* PAGE BUILDING */
     
     var contents = d3.select("body");
-    
-    updateParameterView();
-    
-    
+     
     // list resources
     d3.json(baseUrlBackend + "resources", function (error, result) {
     	
-    	contents.append("h2").text("Resources");
-    	
-    	var lis = contents
+    	var lis = contents.select("#resourcesView")
     		.append("div").append("ul")
     		.selectAll("li.resource")
-    		.data(result)
+    		.data(result.sort(function(a, b) { return d3.ascending(a.description, b.description); }))
     		;
     	
     	lis.enter()
     		.append("li")
     		.attr("class", "resource")
-    		.text(function(d){ return d.name + " " ; })
+    		.text(function(d){ return d.description + " " + d.name ; })
     		.attr("title", function(d){ return d.description + " (" + d.uuid + ")"; })
     		;
     	
@@ -300,25 +287,22 @@
    				})
 			.text(function(d){return "Configure" ;})
 			;
-    	
     });
     
     // list configurations
     d3.json(baseUrlBackend + "configurations", function (error, result) {
     	
-    	contents.append("h2").text("Configurations");
-    	
-    	var lis = contents
+    	var lis = contents.select("#configurationsView")
     		.append("div").append("ul")
     		.selectAll("li.configuration")
-    		.data(result)
+    		.data(result.sort(function(a, b) { return d3.ascending(a.uuid, b.uuid); }))
     		;
     	
     	lis.enter()
     		.append("li")
     		.attr("class", "configuration")
-    		.text(function(d){ return d.name + " " ; })
-    		.attr("title", function(d){ return d.description + " (" + d.uuid + ")"; })
+    		.text(function(d){ return  JSON.stringify(d.parameters) ; })
+    		.attr("title", function(d){ return d.name + " " +  d.description + " (" + d.uuid + ")"; })
     		;
     	
     	lis.append("button")
@@ -327,19 +311,15 @@
    				})
 			.text(function(d){return "Use for ingest" ;})
 			;
-    	
     });
     
     // list projects
     d3.json(baseUrlBackend + "projects", function (error, result) {
     	
-    	contents.append("h2").text("Projects");
-    	
-    	var lis = contents
+    	var lis = contents.select("#projectsView")
     		.append("div").append("ul")
     		.selectAll("li.project")
-    		.data(result)
-//    		.data(result.sort(function(a, b) { return d3.ascending(a.id, b.id); }))
+    		.data(result.sort(function(a, b) { return d3.ascending(a.name, b.name); }))
     		;
     	
     	lis.enter()
@@ -355,18 +335,15 @@
    				})
 			.text(function(d){return "Use for job" ;})
 			;
-    	
     });
     
     // list datamodels
     d3.json(baseUrlBackend + "datamodels", function (error, result) {
-    	
-    	contents.append("h2").text("Datamodels");
-    	
-    	var lis = contents
+
+    	var lis = contents.select("#datamodelsView")
     		.append("div").append("ul")
     		.selectAll("li.datamodel")
-    		.data(result)
+    		.data(result.sort(function(a,b){if (isInternalModel(a)) return -1 ; else return d3.ascending(a.name, b.name) ;}))
     		;
     	
     	lis.enter()
@@ -377,7 +354,7 @@
     		;
     	
     	// input
-    	lis.filter(function(d){return d.uuid.search("DataModel")==-1 ; })
+    	lis.filter(function(d){return !isInternalModel(d);})
     	.append("button")
 		.attr("onclick", function(d){
 			return "setCurrent(this, 'input') ; inputDatamodelID = '" + d.uuid + "'; updateParameterView() ; ";
@@ -386,7 +363,8 @@
 		;
     	
     	// output
-    	lis.filter(function(d){return d.uuid.search("DataModel")!=-1 ; })
+    	lis.filter(function(d){return isInternalModel(d);})
+    	.style("font-weight","bold")
 		.append("button")
 		.attr("onclick", function(d){
 			return "setCurrent(this, 'output'); outputDatamodelID = '" + d.uuid + "'; updateParameterView() ; ";
@@ -402,8 +380,6 @@
 				})
 		.text(function(d){return "Export as RDF/XML";})
 		;
-
-    	
     });
 
     </script>
