@@ -19,8 +19,11 @@
 		<h2>Configurations</h2>
 		<div id="configurationID"><span>current: </span><span class="value"> ... </span></div>
 	</div>
-	<div id="resourcesView"><h2>Resources</h2></div>
-    
+	<div id="resourcesView">
+		<h2>Resources</h2>
+		<input id="updateInputDatamodel" type="checkbox" value="false"/>Update current input data model instead of creating a new data model during ingest
+	</div>
+
     <h2>Current Transform (Task) Configuration</h2>
     <ul id="taskConfigView">
     	<li id="projectID"><span>projectID: </span><span class="value"> ... </span></li>
@@ -50,7 +53,7 @@
     
     /* PARAMETERS */
     var projectID = "";
-    var inputDatamodelID = "";
+    var inputDatamodelID;
     var outputDatamodelID = "";
     var configurationID = "";
     
@@ -191,29 +194,58 @@
 		    			"description" : resource.description,
 		    			"configuration" : configuration
 		    		};
-		    	
-				// metrics
-	        	var ingestNumber = ingestRequestCount++;
-				performance.mark(createStartMark("ingest",ingestNumber));
-		    	
-			  	d3.xhr(baseUrlBackend + "datamodels")
-			    .header("Content-Type", "application/json;charset=utf-8")
-			    .header("Accept", "application/json, text/plain, */*")
-			    .post(
-			        JSON.stringify(configuredDatamodel),
-			        function(err, rawData){
-//			        	console.log(err); console.log(rawData.response);
-
-			        	// metrics
-						performance.mark(createEndMark("ingest",ingestNumber));
-		        		performance.measure(createMeasure("ingest",ingestNumber,resource.name), createStartMark("ingest",ingestNumber), createEndMark("ingest",ingestNumber));
-		        		updateMetricsList();
-						
-			            var configurationResult = JSON.parse(rawData.response);
-		    	  		console.log("configurationResult:");
-		    	  		console.log(configurationResult);
-			        }
-			    );
+			
+		    	if (updateInputDatamodelOnIngest() && inputDatamodelID != null) {
+		    		
+		    		alert("deactivated, since updating not yet implemented in the BE (only metadata is getting updated)");
+		    		
+//		    		console.log("Will update the current input data model " + inputDatamodelID + " using the config " + configuration.uuid);
+//		    		
+		    		// metrics
+//		        	var ingestNumber = ingestRequestCount++;
+//					performance.mark(createStartMark("ingest-update",ingestNumber));
+//					
+//		    		 var xhr = new XMLHttpRequest();
+//		    		 xhr.onload = function(){
+//				        	// metrics
+//							performance.mark(createEndMark("ingest-update",ingestNumber));
+//			        		performance.measure(createMeasure("ingest-update",ingestNumber,resource.name), createStartMark("ingest-update",ingestNumber), createEndMark("ingest-update",ingestNumber));
+//			        		updateMetricsList();
+//			        		
+//				            var configurationResult = JSON.parse(this.responseText);
+//			    	  		console.log("updated datamodel:");
+//			    	  		console.log(configurationResult);
+//		    		 };
+//		    		  xhr.open( "PUT", baseUrlBackend + "datamodels/" + inputDatamodelID, true );
+//		    		  xhr.setRequestHeader( "Content-Type", "application/json;charset=utf-8" );
+//		    		  xhr.setRequestHeader( "Accept", "application/json, text/plain, */*" );
+//		    		  xhr.send(JSON.stringify(configuredDatamodel));
+		    		
+		    	} else {
+		    		
+		    		// metrics
+		        	var ingestNumber = ingestRequestCount++;
+					performance.mark(createStartMark("ingest",ingestNumber));
+					
+				  	d3.xhr(baseUrlBackend + "datamodels")
+				    .header("Content-Type", "application/json;charset=utf-8")
+				    .header("Accept", "application/json, text/plain, */*")
+				    .post(
+				        JSON.stringify(configuredDatamodel),
+				        function(err, rawData){
+	//			        	console.log(err); console.log(rawData.response);
+	
+				        	// metrics
+							performance.mark(createEndMark("ingest",ingestNumber));
+			        		performance.measure(createMeasure("ingest",ingestNumber,resource.name), createStartMark("ingest",ingestNumber), createEndMark("ingest",ingestNumber));
+			        		updateMetricsList();
+							
+				            var configurationResult = JSON.parse(rawData.response);
+			    	  		console.log("configurationResult:");
+			    	  		console.log(configurationResult);
+				        }
+				    );
+		    	}
 	    	});	
     	});
     }
@@ -238,6 +270,10 @@
     	d3.select("."+className).classed(className + " " + "currentSelection",false);
     	d3.select(inputElement.parentNode).classed(className + " " + "currentSelection",true);
     }
+    
+	updateInputDatamodelOnIngest = function () {
+		return d3.select("#updateInputDatamodel").property("checked");
+	}
     
     function formatedTime(timeInMs) {
 	    var mydate = new Date(timeInMs);
@@ -271,7 +307,7 @@
     	var lis = contents.select("#resourcesView")
     		.append("div").append("ul")
     		.selectAll("li.resource")
-    		.data(result.sort(function(a, b) { return d3.ascending(a.description, b.description); }))
+    		.data(result.sort(function(a, b) { return d3.ascending(a.name, b.name); }))
     		;
     	
     	lis.enter()
