@@ -31,10 +31,9 @@
     	<li id="outputDatamodelID"><span>outputDatamodelID: </span><span class="value"> ... </span></li>
     </ul>
     <div style="margin-top:1em">
-    	<button style="color:green" onClick="buildJobAndRunTask(currentTaskConfig,false)">Build job from project and run task (Preview)</button>
-    	<button style="color:red" onClick="buildJobAndRunTask(currentTaskConfig,true)">Build job from project and run task</button>
-    	<button style="color:blue" onClick="queueTaskConfig(currentTaskConfig)">Schedule Task Config</button>
-    	<button style="color:grey" onClick="exportAsRDF(currentTaskConfig.outputDatamodelID)">Export output model as RDF/XML</button>
+		<button style="color:green" onClick="queueTaskConfig(currentTaskConfig,false)">Build job from project and queue task (Preview)</button>
+		<button style="color:red" onClick="queueTaskConfig(currentTaskConfig,true)">Build job from project and queue task</button>
+    	<button style="color:grey" onClick="queueExportConfig(currentTaskConfig.outputDatamodelID)">Export output model as RDF/XML (queued)</button>
     </div>
 
     <div id="projectsView"><h2>Projects</h2></div>
@@ -44,8 +43,8 @@
     	<h2>Process Step Log+Metrics</h2>
 		    <ol id="metricsList" style="font-size:0.75em;">
 		    </ol>
-		<h2>Task Configurations Queue</h2>
-    		<button style="color:green" onClick="consumeTaskConfig()">Consume Task Config as preview</button>
+		<h2>Task Queue</h2>
+    		<button style="color:green" onClick="consumeConfig()">Consume next Task</button>
 		    <ul id="queueList" style="font-size:0.75em;">
 		    </ul>
     </div>
@@ -57,23 +56,47 @@
 //    var baseUrlBackend = "http://sdvdmpdev.slub-dresden.de/dmp/";
     
 	/* CLASSES */
-    var TaskConfiguration = function(inputDatamodelID, outputDatamodelID, projectID) {
+    var TaskConfiguration = function(inputDatamodelID, outputDatamodelID, projectID, persist) {
+      this.processStep = buildJobAndRunTask;
   	  this.inputDatamodelID = inputDatamodelID;
   	  this.outputDatamodelID = outputDatamodelID;
   	  this.projectID = projectID;
-  	  this.configID = taskConfigCount++;
+  	  this.persist = persist;
+  	  this.configID = configCount++;
   	}
+    TaskConfiguration.prototype.toString = function taskConfigToString() {
+	  var ret = "transform " + this.inputDatamodelID + " --> " + this.outputDatamodelID;
+	  return ret;
+    }
+    var ExportConfiguration = function(datamodelID) {
+       this.processStep = exportAsRDF;
+       this.datamodelID = datamodelID;
+       this.configID = configCount++;
+    }
+    ExportConfiguration.prototype.toString = function exportConfigToString() {
+  	  var ret = "export " + this.datamodelID;
+  	  return ret;
+    }
+    var IngestConfiguration = function(resourceID) {
+        this.processStep = ingestAsNewDatamodel;
+        this.resourceID = resourceID;
+        this.configID = configCount++;
+     }
+    IngestConfiguration.prototype.toString = function ingestConfigToString() {
+   	  var ret = "ingest " + this.resourceID;
+   	  return ret;
+    }
 	
     /* PARAMETERS */
     var resourceConfigurationID = "";
     var currentTaskConfig = new TaskConfiguration(null, null, null);
     
     /* GLOBALS */
-    var taskConfigCount = 0;
+    var configCount = 0;
     var transformRequestCount = 0;
     var exportRequestCount = 0;
     var ingestRequestCount = 0;
-    var taskQueue;
+    var configQueue;
     
     /* FUNCTIONS */
     
@@ -104,16 +127,34 @@
     	contents.select("#resourceConfigurationID").select(".value").text(resourceConfigurationID);
     }
     
-    function queueTaskConfig(taskConfig) {
-    	taskQueue.push(new TaskConfiguration(taskConfig.inputDatamodelID, taskConfig.outputDatamodelID, taskConfig.projectID));
+    function queueTaskConfig(taskConfig,persist) {
+    	if(taskConfig.inputDatamodelID == null || taskConfig.outputDatamodelID == null ||  taskConfig.projectID == null)
+    		{alert("check transform task config"); return;}
+    	if (persist == null) persist = false;
+    	configQueue.push(new TaskConfiguration(taskConfig.inputDatamodelID, taskConfig.outputDatamodelID, taskConfig.projectID, persist));
     	updateQueueList();
     }
     
-    function consumeTaskConfig() {
-    	if(taskQueue.getLength()>0) buildJobAndRunTask(taskQueue.shift(), false);
+    function queueExportConfig(dataModelID) {
+    	configQueue.push(new ExportConfiguration(dataModelID));
+    	updateQueueList();
     }
     
-    function buildJobAndRunTask(taskConfig, persist) {
+    function queueIngestConfig(resourceID) {
+    	configQueue.push(new IngestConfiguration(resourceID));
+    	updateQueueList();
+    }
+        
+    function consumeConfig() {
+    	if(configQueue.getLength()>0) {
+    		var config = configQueue.shift();
+    		config.processStep(config);
+    	}
+    }
+    
+    function buildJobAndRunTask(taskConfig) {
+    	
+    	console.log(taskConfig.projectID);
         
         // get project and build job
         d3.json(baseUrlBackend + "projects/" + taskConfig.projectID, function (error, result) {
@@ -137,19 +178,19 @@
 	                	performance.mark(createStartMark("transformation",transformNumber));
 
                 	  	// run task
-                	  	d3.xhr(baseUrlBackend + "tasks?persist=" + persist)
+                	  	d3.xhr(baseUrlBackend + "tasks?persist=" + taskConfig.persist)
                 	    .header("Content-Type", "application/json;charset=utf-8")
                 	    .header("Accept", "application/json, text/plain, */*")
                 	    .post(
                 	        JSON.stringify(currentTask),
                 	        function(err, rawData){
-                	        	
+
                 	        	// metrics
+                	        	var taskName = "transform"; if (!taskConfig.persist) taskName += " (preview)";
                 	        	performance.mark(createEndMark("transformation",transformNumber));
-        		        		performance.measure(createMeasure(rawData.status,"transformation",transformNumber,currentInputDatamodel.name), createStartMark("transformation",transformNumber), createEndMark("transformation",transformNumber));
-								updateMetricsList();
-						    	updateQueueList();
-						    	consumeTaskConfig();
+        		        		performance.measure(createMeasure(rawData.status,taskName,transformNumber,currentInputDatamodel.name), createStartMark("transformation",transformNumber), createEndMark("transformation",transformNumber));
+								updateQueueList(); updateMetricsList(); 
+						    	consumeConfig();
                 	        	
                 	            var transformationResult = JSON.parse(rawData.response);
                     	  		console.log("Transformation results:");
@@ -161,13 +202,13 @@
     	});   
     }
     
-    function exportAsRDF(datamodelID) {
+    function exportAsRDF(exportConfig) {
     	
 		// metrics
     	var exportNumber = exportRequestCount++;
     	performance.mark(createStartMark("export",exportNumber));
     	
-	  	d3.xhr(baseUrlBackend + "datamodels/" + datamodelID + "/export?format=" + encodeURIComponent("application/rdf+xml"))
+	  	d3.xhr(baseUrlBackend + "datamodels/" + exportConfig.datamodelID + "/export?format=" + encodeURIComponent("application/rdf+xml"))
 	    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
 //	    .header("Accept", "application/rdf+xml")
 //	    .header("Accept", "application/octet-stream")
@@ -176,8 +217,9 @@
 	        	
 	        	// metrics
         		performance.mark(createEndMark("export",exportNumber));
-        		performance.measure(createMeasure(rawData.status,"export",exportNumber,datamodelID), createStartMark("export",exportNumber), createEndMark("export",exportNumber));
-        		updateMetricsList();
+        		performance.measure(createMeasure(rawData.status,"export",exportNumber,exportConfig.datamodelID), createStartMark("export",exportNumber), createEndMark("export",exportNumber));
+        		updateQueueList(); updateMetricsList(); 
+		    	consumeConfig();
         		
 //	        	console.log(err); console.log(rawData.response);
     	  		
@@ -192,12 +234,12 @@
     }
     
     
-    function ingestAsNewDataModel(resourceID) {
+    function ingestAsNewDatamodel(ingestConfig) {
     	
-    	console.log("Building datamodel from resource " + resourceID + " using the default config (XML/record) ... ");
+    	console.log("Building datamodel from resource " + ingestConfig.resourceID + " using the default config (XML/record) ... ");
 
         // get resource
-        d3.json(baseUrlBackend + "resources/" + resourceID, function (error, resource) {
+        d3.json(baseUrlBackend + "resources/" + ingestConfig.resourceID, function (error, resource) {
         	
     		// get config
     		d3.json(baseUrlBackend + "configurations/" + resourceConfigurationID, function (error, configuration) {
@@ -253,7 +295,8 @@
 							performance.mark(createEndMark("ingest",ingestNumber));
 							console.log("status: " + rawData.status);
 			        		performance.measure(createMeasure(rawData.status,"ingest",ingestNumber,resource.name), createStartMark("ingest",ingestNumber), createEndMark("ingest",ingestNumber));
-			        		updateMetricsList();
+			        		updateQueueList(); updateMetricsList(); 
+					    	consumeConfig();
 							
 				            var configurationResult = JSON.parse(rawData.response);
 			    	  		console.log("configurationResult:");
@@ -283,15 +326,15 @@
     
     function updateQueueList() {
     	
-    	var updatedQueue = taskQueue.getCurrentArray();
+    	var updatedQueue = configQueue.getCurrentArray();
     	
-    	for(i = 0; i < updatedQueue.length; i++ )
-    		console.log(updatedQueue[i].inputDatamodelID);
+//    	for(i = 0; i < updatedQueue.length; i++ )
+//    		console.log(updatedQueue[i].inputDatamodelID);
 
     	var li = d3.select("#queueList").selectAll("li").data(updatedQueue, function(d){return d.configID ;});
     	li.enter().append("li")
     		.call(highlightTemporarily);
-    	li.text(function(d) { return d.inputDatamodelID});
+    	li.text(function(d) { return d.toString() ;});
     	li.exit().fadeAway();
 
     }
@@ -359,7 +402,7 @@
     
     var contents = d3.select("body");
     
-    taskQueue = new Queue();
+    configQueue = new Queue();
      
     // list resources
     d3.json(baseUrlBackend + "resources", function (error, result) {
@@ -379,9 +422,9 @@
     	
     	lis.append("button")
     		.attr("onclick", function(d){
-    			return "setCurrent(this, 'resource'); ingestAsNewDataModel('" + d.uuid + "');";
+    			return "setCurrent(this, 'resource'); queueIngestConfig('" + d.uuid + "');";
    				})
-			.text(function(d){return "Configure" ;})
+			.text(function(d){return "Queued Ingest" ;})
 			;
     });
     
@@ -472,9 +515,9 @@
     	lis
 		.append("button")
 		.attr("onclick", function(d){
-			return "exportAsRDF('" + d.uuid + "') ; ";
+			return "queueExportConfig('" + d.uuid + "') ; ";
 				})
-		.text(function(d){return "Export as RDF/XML";})
+		.text(function(d){return "Queued Export as RDF/XML";})
 		;
     });
    
