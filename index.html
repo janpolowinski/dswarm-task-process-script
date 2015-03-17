@@ -17,7 +17,7 @@
     
     <div id="configurationsView">
 		<h2>Configurations</h2>
-		<div id="configurationID"><span>current: </span><span class="value"> ... </span></div>
+		<div id="resourceConfigurationID"><span>current: </span><span class="value"> ... </span></div>
 	</div>
 	<div id="resourcesView">
 		<h2>Resources</h2>
@@ -25,7 +25,7 @@
 	</div>
 
     <h2>Current Transform (Task) Configuration</h2>
-    <ul id="taskConfigView">
+    <ul id="currentTaskConfigView">
     	<li id="projectID"><span>projectID: </span><span class="value"> ... </span></li>
     	<li id="inputDatamodelID"><span>inputDatamodelID: </span><span class="value"> ... </span></li>
     	<li id="outputDatamodelID"><span>outputDatamodelID: </span><span class="value"> ... </span></li>
@@ -33,7 +33,7 @@
     <div style="margin-top:1em">
     	<button style="color:green" onClick="buildJobAndRunTask(false)">Build job from project and run task (Preview)</button>
     	<button style="color:red" onClick="buildJobAndRunTask(true)">Build job from project and run task</button>
-    	<button style="color:grey" onClick="exportAsRDF(outputDatamodelID)">Export output model as RDF/XML</button>
+    	<button style="color:grey" onClick="exportAsRDF(currentTaskConfig.outputDatamodelID)">Export output model as RDF/XML</button>
     </div>
 
     <div id="projectsView"><h2>Projects</h2></div>
@@ -52,15 +52,11 @@
 //    var baseUrlBackend = "http://sdvdmpdev.slub-dresden.de/dmp/";
     
     /* PARAMETERS */
-    var projectID = "";
-    var inputDatamodelID;
-    var outputDatamodelID = "";
-    var configurationID = "";
-    
-    var taskConfig = {};
-    taskConfig.projectID = projectID;
-    taskConfig.inputDatamodelID = inputDatamodelID;
-    taskConfig.outputDatamodelID = outputDatamodelID;
+    var resourceConfigurationID = "";
+    var currentTaskConfig = {};
+    	currentTaskConfig.projectID = null;
+    	currentTaskConfig.inputDatamodelID = null;
+    	currentTaskConfig.outputDatamodelID = null;
     
     /* GLOBALS */
     var currentProject;
@@ -95,27 +91,27 @@
     
     
     function updateParameterView() {
-    	contents.select("#projectID").select(".value").text(projectID);
-    	contents.select("#inputDatamodelID").select(".value").text(inputDatamodelID);
-    	contents.select("#outputDatamodelID").select(".value").text(outputDatamodelID);
-    	contents.select("#configurationID").select(".value").text(configurationID);
+    	contents.select("#projectID").select(".value").text(currentTaskConfig.projectID);
+    	contents.select("#inputDatamodelID").select(".value").text(currentTaskConfig.inputDatamodelID);
+    	contents.select("#outputDatamodelID").select(".value").text(currentTaskConfig.outputDatamodelID);
+    	contents.select("#resourceConfigurationID").select(".value").text(resourceConfigurationID);
     }
     
     function buildJobAndRunTask(persist) {
         
         // get project and build job
-        d3.json(baseUrlBackend + "projects/" + projectID, function (error, result) {
+        d3.json(baseUrlBackend + "projects/" + currentTaskConfig.projectID, function (error, result) {
         	
         	currentProject = result;
             currentJob = buildJob(currentProject);
         	
             // get input data model
-            d3.json(baseUrlBackend + "datamodels/" + inputDatamodelID, function (error, result) {
+            d3.json(baseUrlBackend + "datamodels/" + currentTaskConfig.inputDatamodelID, function (error, result) {
             	
                 currentInputDatamodel = result;
 
                 // get output data model
-                d3.json(baseUrlBackend + "datamodels/" + outputDatamodelID, function (error, result) {
+                d3.json(baseUrlBackend + "datamodels/" + currentTaskConfig.outputDatamodelID, function (error, result) {
                 	
                 	currentOutputDatamodel = result;
                 	currentTask = buildTask(currentJob, currentInputDatamodel, currentOutputDatamodel);
@@ -186,7 +182,7 @@
         d3.json(baseUrlBackend + "resources/" + resourceID, function (error, resource) {
         	
     		// get config
-    		d3.json(baseUrlBackend + "configurations/" + configurationID, function (error, configuration) {
+    		d3.json(baseUrlBackend + "configurations/" + resourceConfigurationID, function (error, configuration) {
 
 		    	var configuredDatamodel = {
 		    			"data_resource": resource ,
@@ -195,11 +191,11 @@
 		    			"configuration" : configuration
 		    		};
 			
-		    	if (updateInputDatamodelOnIngest() && inputDatamodelID != null) {
+		    	if (updateInputDatamodelOnIngest() && currentTaskConfig.inputDatamodelID != null) {
 		    		
 		    		alert("deactivated, since updating not yet implemented in the BE (only metadata is getting updated)");
 		    		
-//		    		console.log("Will update the current input data model " + inputDatamodelID + " using the config " + configuration.uuid);
+//		    		console.log("Will update the current input data model " + currentTaskConfig.inputDatamodelID + " using the config " + configuration.uuid);
 //		    		
 		    		// metrics
 //		        	var ingestNumber = ingestRequestCount++;
@@ -216,7 +212,7 @@
 //			    	  		console.log("updated datamodel:");
 //			    	  		console.log(configurationResult);
 //		    		 };
-//		    		  xhr.open( "PUT", baseUrlBackend + "datamodels/" + inputDatamodelID, true );
+//		    		  xhr.open( "PUT", baseUrlBackend + "datamodels/" + currentTaskConfig.inputDatamodelID, true );
 //		    		  xhr.setRequestHeader( "Content-Type", "application/json;charset=utf-8" );
 //		    		  xhr.setRequestHeader( "Accept", "application/json, text/plain, */*" );
 //		    		  xhr.send(JSON.stringify(configuredDatamodel));
@@ -344,7 +340,7 @@
     	
     	lis.append("button")
     		.attr("onclick", function(d){
-    			return "setCurrent(this, 'configuration'); configurationID = '" + d.uuid + "'; updateParameterView() ; ";
+    			return "setCurrent(this, 'configuration'); resourceConfigurationID = '" + d.uuid + "'; updateParameterView() ; ";
    				})
 			.text(function(d){return "Use for ingest" ;})
 			;
@@ -368,7 +364,7 @@
     	
     	lis.append("button")
     		.attr("onclick", function(d){
-    			return "setCurrent(this, 'project'); projectID = '" + d.uuid + "'; updateParameterView() ; ";
+    			return "setCurrent(this, 'project'); currentTaskConfig.projectID = '" + d.uuid + "'; updateParameterView() ; ";
    				})
 			.text(function(d){return "Use for job" ;})
 			;
@@ -394,7 +390,7 @@
     	lis.filter(function(d){return !isInternalModel(d);})
     	.append("button")
 		.attr("onclick", function(d){
-			return "setCurrent(this, 'input') ; inputDatamodelID = '" + d.uuid + "'; updateParameterView() ; ";
+			return "setCurrent(this, 'input') ; currentTaskConfig.inputDatamodelID = '" + d.uuid + "'; updateParameterView() ; ";
 				})
 		.text(function(d){return "Use as input";})
 		;
@@ -404,7 +400,7 @@
     	.style("font-weight","bold")
 		.append("button")
 		.attr("onclick", function(d){
-			return "setCurrent(this, 'output'); outputDatamodelID = '" + d.uuid + "'; updateParameterView() ; ";
+			return "setCurrent(this, 'output'); currentTaskConfig.outputDatamodelID = '" + d.uuid + "'; updateParameterView() ; ";
 				})
 		.text(function(d){return "Use as output";})
 		;
