@@ -31,8 +31,8 @@
     	<li id="outputDatamodelID"><span>outputDatamodelID: </span><span class="value"> ... </span></li>
     </ul>
     <div style="margin-top:1em">
-    	<button style="color:green" onClick="buildJobAndRunTask(false)">Build job from project and run task (Preview)</button>
-    	<button style="color:red" onClick="buildJobAndRunTask(true)">Build job from project and run task</button>
+    	<button style="color:green" onClick="buildJobAndRunTask(currentTaskConfig,false)">Build job from project and run task (Preview)</button>
+    	<button style="color:red" onClick="buildJobAndRunTask(currentTaskConfig,true)">Build job from project and run task</button>
     	<button style="color:grey" onClick="exportAsRDF(currentTaskConfig.outputDatamodelID)">Export output model as RDF/XML</button>
     </div>
 
@@ -59,11 +59,6 @@
     	currentTaskConfig.outputDatamodelID = null;
     
     /* GLOBALS */
-    var currentProject;
-    var currentJob;
-    var currentInputDatamodel;
-    var currentOutputDatamodel;
-    var currentConfig;
     var transformRequestCount = 0;
     var exportRequestCount = 0;
     var ingestRequestCount = 0;
@@ -97,24 +92,24 @@
     	contents.select("#resourceConfigurationID").select(".value").text(resourceConfigurationID);
     }
     
-    function buildJobAndRunTask(persist) {
+    function buildJobAndRunTask(taskConfig, persist) {
         
         // get project and build job
-        d3.json(baseUrlBackend + "projects/" + currentTaskConfig.projectID, function (error, result) {
+        d3.json(baseUrlBackend + "projects/" + taskConfig.projectID, function (error, result) {
         	
-        	currentProject = result;
-            currentJob = buildJob(currentProject);
+        	var currentProject = result;
+            var currentJob = buildJob(currentProject);
         	
             // get input data model
-            d3.json(baseUrlBackend + "datamodels/" + currentTaskConfig.inputDatamodelID, function (error, result) {
+            d3.json(baseUrlBackend + "datamodels/" + taskConfig.inputDatamodelID, function (error, result) {
             	
-                currentInputDatamodel = result;
+                var currentInputDatamodel = result;
 
                 // get output data model
-                d3.json(baseUrlBackend + "datamodels/" + currentTaskConfig.outputDatamodelID, function (error, result) {
+                d3.json(baseUrlBackend + "datamodels/" + taskConfig.outputDatamodelID, function (error, result) {
                 	
-                	currentOutputDatamodel = result;
-                	currentTask = buildTask(currentJob, currentInputDatamodel, currentOutputDatamodel);
+                	var currentOutputDatamodel = result;
+                	var currentTask = buildTask(currentJob, currentInputDatamodel, currentOutputDatamodel);
                 	
                 		// metrics
 	                	var transformNumber = transformRequestCount++;
