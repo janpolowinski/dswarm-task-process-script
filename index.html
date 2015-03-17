@@ -134,7 +134,7 @@
                 	        	
                 	        	// metrics
                 	        	performance.mark(createEndMark("transformation",transformNumber));
-        		        		performance.measure(createMeasure("transformation",transformNumber,currentInputDatamodel.name), createStartMark("transformation",transformNumber), createEndMark("transformation",transformNumber));
+        		        		performance.measure(createMeasure(rawData.status,"transformation",transformNumber,currentInputDatamodel.name), createStartMark("transformation",transformNumber), createEndMark("transformation",transformNumber));
 								updateMetricsList();
                 	        	
                 	            var transformationResult = JSON.parse(rawData.response);
@@ -162,7 +162,7 @@
 	        	
 	        	// metrics
         		performance.mark(createEndMark("export",exportNumber));
-        		performance.measure(createMeasure("export",exportNumber,datamodelID), createStartMark("export",exportNumber), createEndMark("export",exportNumber));
+        		performance.measure(createMeasure(rawData.status,"export",exportNumber,datamodelID), createStartMark("export",exportNumber), createEndMark("export",exportNumber));
         		updateMetricsList();
         		
 //	        	console.log(err); console.log(rawData.response);
@@ -209,7 +209,7 @@
 //		    		 xhr.onload = function(){
 //				        	// metrics
 //							performance.mark(createEndMark("ingest-update",ingestNumber));
-//			        		performance.measure(createMeasure("ingest-update",ingestNumber,resource.name), createStartMark("ingest-update",ingestNumber), createEndMark("ingest-update",ingestNumber));
+//			        		performance.measure(createMeasure(this.status, "ingest-update",ingestNumber,resource.name), createStartMark("ingest-update",ingestNumber), createEndMark("ingest-update",ingestNumber));
 //			        		updateMetricsList();
 //			        		
 //				            var configurationResult = JSON.parse(this.responseText);
@@ -237,7 +237,8 @@
 	
 				        	// metrics
 							performance.mark(createEndMark("ingest",ingestNumber));
-			        		performance.measure(createMeasure("ingest",ingestNumber,resource.name), createStartMark("ingest",ingestNumber), createEndMark("ingest",ingestNumber));
+							console.log("status: " + rawData.status);
+			        		performance.measure(createMeasure(rawData.status,"ingest",ingestNumber,resource.name), createStartMark("ingest",ingestNumber), createEndMark("ingest",ingestNumber));
 			        		updateMetricsList();
 							
 				            var configurationResult = JSON.parse(rawData.response);
@@ -289,7 +290,7 @@
     
     function createStartMark(eventType,count) { return "start_" + eventType + "_" + count }
     function createEndMark(eventType,count) { return "end_" + eventType + "_" + count }
-    function createMeasure(eventType,count,descriptor) {return "" + eventType + " (" + descriptor + ") # " + count}
+    function createMeasure(status,eventType,count,descriptor) {return eventType + " (" + descriptor + ") # " + count + " (" + status + ")"}
     
     function highlightTemporarily(selection) {
     	selection.style("background-color", "lightgreen").transition().duration(1000).style("background-color", "white");
