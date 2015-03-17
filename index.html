@@ -33,6 +33,7 @@
     <div style="margin-top:1em">
     	<button style="color:green" onClick="buildJobAndRunTask(currentTaskConfig,false)">Build job from project and run task (Preview)</button>
     	<button style="color:red" onClick="buildJobAndRunTask(currentTaskConfig,true)">Build job from project and run task</button>
+    	<button style="color:blue" onClick="queueTaskConfig(currentTaskConfig)">Schedule Task Config</button>
     	<button style="color:grey" onClick="exportAsRDF(currentTaskConfig.outputDatamodelID)">Export output model as RDF/XML</button>
     </div>
 
@@ -41,8 +42,12 @@
 
     <div id="metricsView">
     	<h2>Process Step Log+Metrics</h2>
-	    <ol id="metricsList" style="font-size:0.75em;">
-	    </ol>
+		    <ol id="metricsList" style="font-size:0.75em;">
+		    </ol>
+		<h2>Task Configurations Queue</h2>
+    		<button style="color:green" onClick="consumeTaskConfig()">Consume Task Config as preview</button>
+		    <ul id="queueList" style="font-size:0.75em;">
+		    </ul>
     </div>
     
     <script type="text/javascript">
@@ -51,17 +56,24 @@
 	var baseUrlBackend = "http://127.0.0.1:8087/dmp/";
 //    var baseUrlBackend = "http://sdvdmpdev.slub-dresden.de/dmp/";
     
+	/* CLASSES */
+    var TaskConfiguration = function(inputDatamodelID, outputDatamodelID, projectID) {
+  	  this.inputDatamodelID = inputDatamodelID;
+  	  this.outputDatamodelID = outputDatamodelID;
+  	  this.projectID = projectID;
+  	  this.configID = taskConfigCount++;
+  	}
+	
     /* PARAMETERS */
     var resourceConfigurationID = "";
-    var currentTaskConfig = {};
-    	currentTaskConfig.projectID = null;
-    	currentTaskConfig.inputDatamodelID = null;
-    	currentTaskConfig.outputDatamodelID = null;
+    var currentTaskConfig = new TaskConfiguration(null, null, null);
     
     /* GLOBALS */
+    var taskConfigCount = 0;
     var transformRequestCount = 0;
     var exportRequestCount = 0;
     var ingestRequestCount = 0;
+    var taskQueue;
     
     /* FUNCTIONS */
     
@@ -90,6 +102,15 @@
     	contents.select("#inputDatamodelID").select(".value").text(currentTaskConfig.inputDatamodelID);
     	contents.select("#outputDatamodelID").select(".value").text(currentTaskConfig.outputDatamodelID);
     	contents.select("#resourceConfigurationID").select(".value").text(resourceConfigurationID);
+    }
+    
+    function queueTaskConfig(taskConfig) {
+    	taskQueue.push(new TaskConfiguration(taskConfig.inputDatamodelID, taskConfig.outputDatamodelID, taskConfig.projectID));
+    	updateQueueList();
+    }
+    
+    function consumeTaskConfig() {
+    	if(taskQueue.getLength()>0) buildJobAndRunTask(taskQueue.shift(), false);
     }
     
     function buildJobAndRunTask(taskConfig, persist) {
@@ -127,6 +148,8 @@
                 	        	performance.mark(createEndMark("transformation",transformNumber));
         		        		performance.measure(createMeasure(rawData.status,"transformation",transformNumber,currentInputDatamodel.name), createStartMark("transformation",transformNumber), createEndMark("transformation",transformNumber));
 								updateMetricsList();
+						    	updateQueueList();
+						    	consumeTaskConfig();
                 	        	
                 	            var transformationResult = JSON.parse(rawData.response);
                     	  		console.log("Transformation results:");
@@ -258,6 +281,21 @@
     		;
     }
     
+    function updateQueueList() {
+    	
+    	var updatedQueue = taskQueue.getCurrentArray();
+    	
+    	for(i = 0; i < updatedQueue.length; i++ )
+    		console.log(updatedQueue[i].inputDatamodelID);
+
+    	var li = d3.select("#queueList").selectAll("li").data(updatedQueue, function(d){return d.configID ;});
+    	li.enter().append("li")
+    		.call(highlightTemporarily);
+    	li.text(function(d) { return d.inputDatamodelID});
+    	li.exit().fadeAway();
+
+    }
+    
     function setCurrent(inputElement, className) {
     	d3.select("."+className).classed(className + " " + "currentSelection",false);
     	d3.select(inputElement.parentNode).classed(className + " " + "currentSelection",true);
@@ -279,6 +317,31 @@
 	    return formatedTime;
     }
     
+	// http://insertafter.com/en/blog/fifo_lifo_javascript.html
+    var Queue = function() {
+      	 var functionSet=(function() {
+      		 var _elements=[]; // creating a private array
+      		 return [
+      		 // push function
+      		 function()
+      		 	{ return _elements.push .apply(_elements,arguments); },
+      		  // shift function
+      		 function()
+      		 	{ return _elements.shift .apply(_elements,arguments); },
+      		 function() { return _elements.length; },
+      		 function(n) { return _elements.length=n; },
+        	 function() { return _elements; }];
+      	 })();
+      	 this.push=functionSet[0];
+      	 this.shift=functionSet[1];
+      	 this.getLength=functionSet[2];
+      	 this.setLength=functionSet[3];
+      	 this.getCurrentArray=functionSet[4];
+      	 // initializing the queue with given arguments
+      	 this.push.apply(this,arguments);
+      };
+
+    
     function createStartMark(eventType,count) { return "start_" + eventType + "_" + count }
     function createEndMark(eventType,count) { return "end_" + eventType + "_" + count }
     function createMeasure(status,eventType,count,descriptor) {return eventType + " (" + descriptor + ") # " + count + " (" + status + ")"}
@@ -286,12 +349,17 @@
     function highlightTemporarily(selection) {
     	selection.style("background-color", "lightgreen").transition().duration(1000).style("background-color", "white");
     }
+    d3.selection.prototype.fadeAway = function () {
+	    return this.style("opacity", 1).transition().duration(1000).style("opacity", 0).remove();
+    };
     
     function isInternalModel(model){ return model.configuration == null ; }
     
     /* PAGE BUILDING */
     
     var contents = d3.select("body");
+    
+    taskQueue = new Queue();
      
     // list resources
     d3.json(baseUrlBackend + "resources", function (error, result) {
@@ -409,7 +477,7 @@
 		.text(function(d){return "Export as RDF/XML";})
 		;
     });
-
+   
     </script>
     </body>
 </html>
