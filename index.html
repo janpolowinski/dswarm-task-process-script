@@ -519,6 +519,15 @@
 				})
 		.text(function(d){return "Queued Export as RDF/XML";})
 		;
+    	
+    	// quick transform
+    	lis.filter(function(d){return !isInternalModel(d);})
+    	.append("button")
+		.attr("onclick", function(d){
+			return "setCurrent(this, 'input') ; currentTaskConfig.inputDatamodelID = '" + d.uuid + "'; queueTaskConfig(currentTaskConfig,true) ; updateParameterView() ; ";
+				})
+		.text(function(d){return "Queue transform (non-preview)";})
+		;
     });
    
     </script>
