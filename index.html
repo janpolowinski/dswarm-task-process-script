@@ -33,7 +33,7 @@
     <div style="margin-top:1em">
 		<button style="color:green" onClick="queueTaskConfig(currentTaskConfig,false)">Build job from project and queue task (Preview)</button>
 		<button style="color:red" onClick="queueTaskConfig(currentTaskConfig,true)">Build job from project and queue task</button>
-    	<button style="color:grey" onClick="queueExportConfig(currentTaskConfig.outputDatamodelID)">Export output model as RDF/XML (queued)</button>
+    	<button style="color:grey" onClick="queueExportConfig(currentTaskConfig.outputDatamodelID,'application/xml')">Export output model (XML, queued)</button>
     </div>
 
     <div id="projectsView"><h2>Projects</h2></div>
@@ -68,13 +68,14 @@
 	  var ret = "transform " + this.inputDatamodelID + " --> " + this.outputDatamodelID;
 	  return ret;
     }
-    var ExportConfiguration = function(datamodelID) {
-       this.processStep = exportAsRDF;
+    var ExportConfiguration = function(datamodelID,format) {
+       this.processStep = exportDatamodel;
        this.datamodelID = datamodelID;
+       this.format = format;
        this.configID = configCount++;
     }
     ExportConfiguration.prototype.toString = function exportConfigToString() {
-  	  var ret = "export " + this.datamodelID;
+  	  var ret = "export " + this.datamodelID + " as " + this.format ;
   	  return ret;
     }
     var IngestConfiguration = function(resourceID) {
@@ -135,8 +136,8 @@
     	updateQueueList();
     }
     
-    function queueExportConfig(dataModelID) {
-    	configQueue.push(new ExportConfiguration(dataModelID));
+    function queueExportConfig(dataModelID,format) {
+    	configQueue.push(new ExportConfiguration(dataModelID,format));
     	updateQueueList();
     }
     
@@ -202,15 +203,14 @@
     	});   
     }
     
-    function exportAsRDF(exportConfig) {
+    function exportDatamodel(exportConfig) {
     	
 		// metrics
     	var exportNumber = exportRequestCount++;
     	performance.mark(createStartMark("export",exportNumber));
     	
-	  	d3.xhr(baseUrlBackend + "datamodels/" + exportConfig.datamodelID + "/export?format=" + encodeURIComponent("application/rdf+xml"))
+	    d3.xhr(baseUrlBackend + "datamodels/" + exportConfig.datamodelID + "/export?format=" + encodeURIComponent(exportConfig.format))
 	    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-//	    .header("Accept", "application/rdf+xml")
 //	    .header("Accept", "application/octet-stream")
 	    .get(
 	        function(err, rawData) {
@@ -512,12 +512,17 @@
 		;
     	
     	// export
-    	lis
-		.append("button")
+    	lis.append("button")
 		.attr("onclick", function(d){
-			return "queueExportConfig('" + d.uuid + "') ; ";
+			return "queueExportConfig('" + d.uuid + "','application/rdf+xml') ; ";
 				})
-		.text(function(d){return "Queued Export as RDF/XML";})
+		.text(function(d){return "Queued RDF/XML-Export";})
+		;
+    	lis.append("button")
+		.attr("onclick", function(d){
+			return "queueExportConfig('" + d.uuid + "','application/xml') ; ";
+				})
+		.text(function(d){return "XML";})
 		;
     	
     	// quick transform
