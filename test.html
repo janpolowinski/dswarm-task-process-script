@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+        <!--<link type="text/css" rel="stylesheet" href="css/main.css"/>-->
+        <script type="text/javascript" src="libs/d3.min.js"></script>
+        <!--<script src="http://d3js.org/d3.v3.min.js"></script>-->
+        <!--<script type="text/javascript" src="settings.js"></script>-->
+        <style type="text/css">
+        	body { font-family: "Arial"; font-size: 0.9em; }
+        	.currentSelection { font-weight: bold ; color: red ; }
+        	#metricsView { position:absolute; top:0px; right:0px; margin:1em; background-color:white ; }
+        </style>
+    </head>
+    <body>
+    
+    
+    <script type="text/javascript">
+    
+  
+    // http://insertafter.com/en/blog/fifo_lifo_javascript.html
+    
+    var Queue = function() {
+   	 var functionSet=(function() {
+   		 var _elements=[]; // creating a private array
+   		 return [
+   		 // push function
+   		 function()
+   		 	{ return _elements.push .apply(_elements,arguments); },
+   		  // shift function
+   		 function()
+   		 	{ return _elements.shift .apply(_elements,arguments); },
+   		 function() { return _elements.length; },
+   		 function(n) { return _elements.length=n; },
+   		function() { return _elements; }];
+   	 })();
+   	 this.push=functionSet[0];
+   	 this.shift=functionSet[1];
+   	 this.getLength=functionSet[2];
+   	 this.setLength=functionSet[3];
+   	 this.getCurrentArray=functionSet[4];
+   	 // initializing the queue with given arguments
+   	 this.push.apply(this,arguments);
+   };
+
+   // Usage
+   var q=new Queue(0,1), e;
+   console.log(q.getCurrentArray());
+   q.push(2);
+   console.log(q.getCurrentArray());
+   q.push(3);
+   console.log(q.getCurrentArray());
+   console.log(q.shift());
+   console.log(q.getCurrentArray());
+   
+//   console.log(q.shift());
+//   console.log(q.getLength()); // 3
+//   while(undefined!==(e=q.shift()))
+//   	console.log(e); // 0, 1, 2 
+
+    </script>
+    </body>
+</html>
