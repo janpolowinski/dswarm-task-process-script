@@ -360,7 +360,7 @@
 	    return formatedTime;
     }
     
-	// http://insertafter.com/en/blog/fifo_lifo_javascript.html
+	// after http://insertafter.com/en/blog/fifo_lifo_javascript.html / https://gist.githubusercontent.com/nfroidure/5472445/raw/Queue.js
     var Queue = function() {
       	 var functionSet=(function() {
       		 var _elements=[]; // creating a private array
@@ -435,7 +435,7 @@
     		.append("div").append("ul")
     		.selectAll("li.configuration")
     		.data(result.sort(function(a, b) { return d3.ascending(a.uuid, b.uuid); }))
-    		;
+    		;https://gist.githubusercontent.com/nfroidure/5472445/raw/Queue.js
     	
     	lis.enter()
     		.append("li")
