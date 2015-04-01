@@ -289,7 +289,6 @@
 				    .header("Content-Type", "application/json;charset=utf-8")
 				    .header("Accept", "application/json, text/plain, */*")
 				    .post(function(err, rawData){
-	//			        	console.log(err); console.log(rawData.response);
 	
 				        	// metrics
 							performance.mark(createEndMark("ingest-update",ingestNumber));
@@ -297,10 +296,8 @@
 			        		performance.measure(createMeasure(rawData.status,"ingest-update",ingestNumber,resource.name), createStartMark("ingest-update",ingestNumber), createEndMark("ingest-update",ingestNumber));
 			        		updateQueueList(); updateMetricsList(); 
 					    	consumeConfig();
-							
-				            var configurationResult = JSON.parse(rawData.response);
-			    	  		console.log("configurationResult:");
-			    	  		console.log(configurationResult);
+
+//			    	  		console.log(rawData);
 				        }
 				    );
 		    		
