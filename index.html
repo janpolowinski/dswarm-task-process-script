@@ -253,31 +253,56 @@
 		    			"configuration" : configuration
 		    		};
 			
-		    	if (updateInputDatamodelOnIngest() && currentTaskConfig.inputDatamodelID != null) {
+		    	if (updateInputDatamodelOnIngest()) {
 		    		
-		    		alert("deactivated, since updating not yet implemented in the BE (only metadata is getting updated)");
+		    		if (null==currentTaskConfig.inputDatamodelID) { 
+		    			alert("Please select input data model as target for data model update.");
+		    			return; 
+		    		} // TODO: this check should happen at scheduling time ...
 		    		
-//		    		console.log("Will update the current input data model " + currentTaskConfig.inputDatamodelID + " using the config " + configuration.uuid);
-//		    		
+		    		console.log("Will update the current input data model " + currentTaskConfig.inputDatamodelID + " using the config " + configuration.uuid);
+		    		
 		    		// metrics
-//		        	var ingestNumber = ingestRequestCount++;
-//					performance.mark(createStartMark("ingest-update",ingestNumber));
-//					
+		        	var ingestNumber = ingestRequestCount++;
+					performance.mark(createStartMark("ingest-update",ingestNumber));
+
 //		    		 var xhr = new XMLHttpRequest();
 //		    		 xhr.onload = function(){
 //				        	// metrics
 //							performance.mark(createEndMark("ingest-update",ingestNumber));
+//							console.log("status: " + this.status);
 //			        		performance.measure(createMeasure(this.status, "ingest-update",ingestNumber,resource.name), createStartMark("ingest-update",ingestNumber), createEndMark("ingest-update",ingestNumber));
-//			        		updateMetricsList();
+//			        		updateQueueList(); updateMetricsList(); 
+//					    	consumeConfig();
 //			        		
 //				            var configurationResult = JSON.parse(this.responseText);
 //			    	  		console.log("updated datamodel:");
 //			    	  		console.log(configurationResult);
 //		    		 };
-//		    		  xhr.open( "PUT", baseUrlBackend + "datamodels/" + currentTaskConfig.inputDatamodelID, true );
+//		    		  xhr.open( "PUT", baseUrlBackend + "datamodels/" + currentTaskConfig.inputDatamodelID + "/data", true );
 //		    		  xhr.setRequestHeader( "Content-Type", "application/json;charset=utf-8" );
 //		    		  xhr.setRequestHeader( "Accept", "application/json, text/plain, */*" );
 //		    		  xhr.send(JSON.stringify(configuredDatamodel));
+
+					
+				  	d3.xhr(baseUrlBackend + "datamodels/" + currentTaskConfig.inputDatamodelID + "/data")
+				    .header("Content-Type", "application/json;charset=utf-8")
+				    .header("Accept", "application/json, text/plain, */*")
+				    .post(function(err, rawData){
+	//			        	console.log(err); console.log(rawData.response);
+	
+				        	// metrics
+							performance.mark(createEndMark("ingest-update",ingestNumber));
+							console.log("status: " + rawData.status);
+			        		performance.measure(createMeasure(rawData.status,"ingest-update",ingestNumber,resource.name), createStartMark("ingest-update",ingestNumber), createEndMark("ingest-update",ingestNumber));
+			        		updateQueueList(); updateMetricsList(); 
+					    	consumeConfig();
+							
+				            var configurationResult = JSON.parse(rawData.response);
+			    	  		console.log("configurationResult:");
+			    	  		console.log(configurationResult);
+				        }
+				    );
 		    		
 		    	} else {
 		    		
