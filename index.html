@@ -17,6 +17,11 @@
         </style>
     </head>
     <body>
+    
+    <form id="file-form" action="handler.php" method="POST">
+    	<input type="file" id="file-select" name="photos[]" multiple/>
+    	<button type="submit" id="upload-button">Upload</button>
+    </form>
 
     <h2>Current Transform (Task) Configuration</h2>
 	<div style="background-color:#eee;padding:0.5em">
@@ -93,7 +98,7 @@
    	  var ret = "ingest " + this.resourceID;
    	  return ret;
     }
-	
+
     /* PARAMETERS */
     var resourceConfigurationID = "";
     var currentTaskConfig = new TaskConfiguration(null, null, null);
@@ -104,6 +109,10 @@
     var exportRequestCount = 0;
     var ingestRequestCount = 0;
     var configQueue;
+    
+    var form = document.getElementById('file-form');
+    var fileSelect = document.getElementById('file-select');
+    var uploadButton = document.getElementById('upload-button');
     
     /* FUNCTIONS */
     
@@ -269,26 +278,7 @@
 		    		// metrics
 		        	var ingestNumber = ingestRequestCount++;
 					performance.mark(createStartMark("ingest-update",ingestNumber));
-
-//		    		 var xhr = new XMLHttpRequest();
-//		    		 xhr.onload = function(){
-//				        	// metrics
-//							performance.mark(createEndMark("ingest-update",ingestNumber));
-//							console.log("status: " + this.status);
-//			        		performance.measure(createMeasure(this.status, "ingest-update",ingestNumber,resource.name), createStartMark("ingest-update",ingestNumber), createEndMark("ingest-update",ingestNumber));
-//			        		updateQueueList(); updateMetricsList(); 
-//					    	consumeConfig();
-//			        		
-//				            var configurationResult = JSON.parse(this.responseText);
-//			    	  		console.log("updated datamodel:");
-//			    	  		console.log(configurationResult);
-//		    		 };
-//		    		  xhr.open( "PUT", baseUrlBackend + "datamodels/" + currentTaskConfig.inputDatamodelID + "/data", true );
-//		    		  xhr.setRequestHeader( "Content-Type", "application/json;charset=utf-8" );
-//		    		  xhr.setRequestHeader( "Accept", "application/json, text/plain, */*" );
-//		    		  xhr.send(JSON.stringify(configuredDatamodel));
-
-					
+				
 				  	d3.xhr(baseUrlBackend + "datamodels/" + currentTaskConfig.inputDatamodelID + "/data")
 				    .header("Content-Type", "application/json;charset=utf-8")
 				    .header("Accept", "application/json, text/plain, */*")
@@ -577,6 +567,68 @@
 		.text(function(d){return "Queue transform (non-preview)";})
 		;
     });
+    
+    // upload files and create ingest jobs
+    form.onsubmit = function(event) {
+  	  event.preventDefault();
+  	  uploadButton.innerHTML = 'Uploading...';
+  	  var files = fileSelect.files;
+  	  var formData = new FormData();
+  	  
+	  for (var i = 0; i < files.length; i++) {
+		  
+	  	 var file = files[i];
+	  	  
+	  	 console.log("uploading file " + file.name);
+	  	 
+	  	 var taskConfig=currentTaskConfig;
+	  	 
+         // get input data model
+         d3.json(baseUrlBackend + "datamodels/" + taskConfig.inputDatamodelID, function (error, currentInputDatamodel) {
+        	      	 
+		  	  // Add the file to the request.
+		  	  formData.append('file', file);
+		  	  formData.append('name', file.name);
+		  	  formData.append('description', file.name);
+	  	  
+		 	  var xhr = new XMLHttpRequest();
+		 	  xhr.onload = function(){
+		        	// metrics
+	//	 			performance.mark(createEndMark("ingest-update",ingestNumber));
+		 			console.log("status: " + this.status);
+	//	    		performance.measure(createMeasure(this.status, "ingest-update",ingestNumber,resource.name), createStartMark("ingest-update",ingestNumber), createEndMark("ingest-update",ingestNumber));
+	//	    		updateQueueList(); updateMetricsList(); 
+	//	 	    	consumeConfig();
+		    		
+		            var resourceUpdateResult = JSON.parse(this.responseText);
+		 	  		console.log("uploaded resource " ); // + resourceUpdateResult);
+		 	  		console.log(resourceUpdateResult);
+		 	  };
+			  xhr.open( "PUT", baseUrlBackend + "resources/" + currentInputDatamodel.data_resource.uuid, true );
+			  xhr.send(formData);
+         
+	  		});
+	  	}
+      }
+    
+    
+//	 var xhr = new XMLHttpRequest();
+//	 xhr.onload = function(){
+//       	// metrics
+//			performance.mark(createEndMark("ingest-update",ingestNumber));
+//			console.log("status: " + this.status);
+//   		performance.measure(createMeasure(this.status, "ingest-update",ingestNumber,resource.name), createStartMark("ingest-update",ingestNumber), createEndMark("ingest-update",ingestNumber));
+//   		updateQueueList(); updateMetricsList(); 
+//	    	consumeConfig();
+//   		
+//           var configurationResult = JSON.parse(this.responseText);
+//	  		console.log("updated datamodel:");
+//	  		console.log(configurationResult);
+//	 };
+//	  xhr.open( "PUT", baseUrlBackend + "datamodels/" + currentTaskConfig.inputDatamodelID + "/data", true );
+//	  xhr.setRequestHeader( "Content-Type", "application/json;charset=utf-8" );
+//	  xhr.setRequestHeader( "Accept", "application/json, text/plain, */*" );
+//	  xhr.send(JSON.stringify(configuredDatamodel));
    
     </script>
     
