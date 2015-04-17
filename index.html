@@ -326,6 +326,39 @@
     	});
     }
     
+    
+  function updateResourceAndDatamodel(taskConfig) {
+    	
+    	console.log("Updating datamodel with ID " + taskConfig.inputDatamodelID);
+
+        // get input data model
+        d3.json(baseUrlBackend + "datamodels/" + taskConfig.inputDatamodelID, function (error, currentInputDatamodel) {
+       	      	 
+		  	  // Add the file to the request.
+		  	  formData.append('file', file);
+		  	  formData.append('name', file.name);
+		  	  formData.append('description', file.name);
+	  	  
+		 	  var xhr = new XMLHttpRequest();
+		 	  xhr.onload = function(){
+		        	// metrics
+	//	 			performance.mark(createEndMark("ingest-update",ingestNumber));
+		 			console.log("status: " + this.status);
+	//	    		performance.measure(createMeasure(this.status, "ingest-update",ingestNumber,resource.name), createStartMark("ingest-update",ingestNumber), createEndMark("ingest-update",ingestNumber));
+	//	    		updateQueueList(); updateMetricsList(); 
+	//	 	    	consumeConfig();
+		    		
+		            var resourceUpdateResult = JSON.parse(this.responseText);
+		 	  		console.log("uploaded resource " ); // + resourceUpdateResult);
+		 	  		console.log(resourceUpdateResult);
+		 	  };
+			  xhr.open( "PUT", baseUrlBackend + "resources/" + currentInputDatamodel.data_resource.uuid, true );
+			  xhr.send(formData);
+        
+	  		});
+    }
+
+    
     function updateMetricsList() {
     	
 		var updatedMeasurements = window.performance.getEntriesByType('measure');
@@ -580,34 +613,8 @@
 	  	 var file = files[i];
 	  	  
 	  	 console.log("uploading file " + file.name);
-	  	 
-	  	 var taskConfig=currentTaskConfig;
-	  	 
-         // get input data model
-         d3.json(baseUrlBackend + "datamodels/" + taskConfig.inputDatamodelID, function (error, currentInputDatamodel) {
-        	      	 
-		  	  // Add the file to the request.
-		  	  formData.append('file', file);
-		  	  formData.append('name', file.name);
-		  	  formData.append('description', file.name);
-	  	  
-		 	  var xhr = new XMLHttpRequest();
-		 	  xhr.onload = function(){
-		        	// metrics
-	//	 			performance.mark(createEndMark("ingest-update",ingestNumber));
-		 			console.log("status: " + this.status);
-	//	    		performance.measure(createMeasure(this.status, "ingest-update",ingestNumber,resource.name), createStartMark("ingest-update",ingestNumber), createEndMark("ingest-update",ingestNumber));
-	//	    		updateQueueList(); updateMetricsList(); 
-	//	 	    	consumeConfig();
-		    		
-		            var resourceUpdateResult = JSON.parse(this.responseText);
-		 	  		console.log("uploaded resource " ); // + resourceUpdateResult);
-		 	  		console.log(resourceUpdateResult);
-		 	  };
-			  xhr.open( "PUT", baseUrlBackend + "resources/" + currentInputDatamodel.data_resource.uuid, true );
-			  xhr.send(formData);
-         
-	  		});
+
+	  	 updateResourceAndDatamodel(currentTaskConfig);
 	  	}
       }
     
