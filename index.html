@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head>
+    	<title>Task-Processing (Chrome only)</title>
         <meta charset="utf-8">
         <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
         <!--<link type="text/css" rel="stylesheet" href="css/main.css"/>-->
@@ -11,32 +12,34 @@
         <!--<script type="text/javascript" src="settings.js"></script>-->
         <style type="text/css">
         	body { font-family: "Arial"; font-size: 0.9em; }
-        	.currentSelection { font-weight: bold ; color: red ; }
+        	.currentSelection, .warning { font-weight: bold ; color: red ; }
         	#metricsView { position:absolute; top:0px; right:0px; margin:1em; background-color:white ; }
         </style>
     </head>
     <body>
+
+    <h2>Current Transform (Task) Configuration</h2>
+	<div style="background-color:#eee;padding:0.5em">
+	    <ul id="currentTaskConfigView">
+	    	<li id="projectID"><span>prototype.projectID=</span><span class="value"> ... </span></li>
+	    	<li id="inputDatamodelID"><span>prototype.dataModelID=</span><span class="value"> ... </span></li>
+	    	<li id="outputDatamodelID"><span>prototype.outputDataModelID=</span><span class="value"> ... </span></li>
+	    </ul>
+	    <div style="margin-top:1em">
+			<button style="color:green" onClick="queueTaskConfig(currentTaskConfig,false)">Build job from project and queue task (Preview)</button>
+			<button style="color:red" onClick="queueTaskConfig(currentTaskConfig,true)">Build job from project and queue task</button>
+	    	<button style="color:grey" onClick="queueExportConfig(currentTaskConfig.outputDatamodelID,'application/xml')">Export output model (XML, queued)</button>
+	    </div>
+    </div>
     
     <div id="configurationsView">
-		<h2>Configurations</h2>
+		<h2>Configurations (Ingest)</h2>
 		<div id="resourceConfigurationID"><span>current: </span><span class="value"> ... </span></div>
 	</div>
 	<div id="resourcesView">
 		<h2>Resources</h2>
 		<input id="updateInputDatamodel" type="checkbox" value="false"/>Update current input data model instead of creating a new data model during ingest
 	</div>
-
-    <h2>Current Transform (Task) Configuration</h2>
-    <ul id="currentTaskConfigView">
-    	<li id="projectID"><span>projectID: </span><span class="value"> ... </span></li>
-    	<li id="inputDatamodelID"><span>inputDatamodelID: </span><span class="value"> ... </span></li>
-    	<li id="outputDatamodelID"><span>outputDatamodelID: </span><span class="value"> ... </span></li>
-    </ul>
-    <div style="margin-top:1em">
-		<button style="color:green" onClick="queueTaskConfig(currentTaskConfig,false)">Build job from project and queue task (Preview)</button>
-		<button style="color:red" onClick="queueTaskConfig(currentTaskConfig,true)">Build job from project and queue task</button>
-    	<button style="color:grey" onClick="queueExportConfig(currentTaskConfig.outputDatamodelID,'application/xml')">Export output model (XML, queued)</button>
-    </div>
 
     <div id="projectsView"><h2>Projects</h2></div>
     <div id="datamodelsView"><h2>Datamodels</h2></div>
@@ -55,7 +58,8 @@
     
     /* SETTINGS */
 	var baseUrlBackend = "http://127.0.0.1:8087/dmp/";
-//    var baseUrlBackend = "http://sdvdmpdev.slub-dresden.de/dmp/";
+//  var baseUrlBackend = "http://sdvdmpdev.slub-dresden.de/dmp/";
+//  var baseUrlBackend = "http://194.95.145.44/dmp/";
     
 	/* CLASSES */
     var TaskConfiguration = function(inputDatamodelID, outputDatamodelID, projectID, persist) {
