@@ -274,13 +274,6 @@
         	
     		// get config
     		d3.json(baseUrlBackend + "configurations/" + resourceConfigurationID, function (error, configuration) {
-
-		    	var configuredDatamodel = {
-		    			"data_resource": resource ,
-		    			"name" : resource.name,
-		    			"description" : resource.description,
-		    			"configuration" : configuration
-		    		};
 			
 		    	if (updateInputDatamodelOnIngest()) {
 		    		
@@ -312,6 +305,13 @@
 				    );
 		    		
 		    	} else {
+		    		
+			    	var configuredDatamodel = {
+			    			"data_resource": resource ,
+			    			"name" : resource.name,
+			    			"description" : resource.description,
+			    			"configuration" : configuration
+			    		};
 		    		
 		    		// metrics
 		        	var ingestNumber = ingestRequestCount++;
@@ -349,27 +349,38 @@
 
         // get input data model
         d3.json(baseUrlBackend + "datamodels/" + config.inputDatamodelID, function (error, currentInputDatamodel) {
-        	
-        	// metrics
-        	var ingestNumber = ingestRequestCount++;
-			performance.mark(createStartMark("ingest-upload",ingestNumber));
-       	      	 
+
 			// Add the file to the request.
 			var formData = new FormData();
 	  	  	formData.append('file', config.file);
 	  	  	formData.append('name', config.file.name);
 	  	  	formData.append('description', config.file.name);
   	  
+	  	  	// update resource
 	  	  	var xhr = new XMLHttpRequest();
-	  	  	xhr.onload = function(){
+	  	  	xhr.onload = function() {
+	  	  		
 	        	// metrics
-	 			performance.mark(createEndMark("ingest-upload",ingestNumber));
-	    		performance.measure(createMeasure(this.status, "ingest-upload",ingestNumber,config.file.name), createStartMark("ingest-upload",ingestNumber), createEndMark("ingest-upload",ingestNumber));
-	    		updateQueueList(); updateMetricsList(); 
-	 	    	consumeConfig();
-	    		
-	            var resourceUpdateResult = JSON.parse(this.responseText);
+	        	var ingestNumber = ingestRequestCount++;
+				performance.mark(createStartMark("ingest-upload",ingestNumber));
+
+//	            var resourceUpdateResult = JSON.parse(this.responseText);
 //	 	  		console.log(resourceUpdateResult);
+	 	    	
+	 	    	// update datamodel (content)
+			  	d3.xhr(baseUrlBackend + "datamodels/" + config.inputDatamodelID + "/data")
+			    .header("Content-Type", "application/json;charset=utf-8")
+			    .header("Accept", "application/json, text/plain, */*")
+			    .post(function(err, rawData){
+			    	
+			    	// metrics
+		 			performance.mark(createEndMark("ingest-upload",ingestNumber));
+		    		performance.measure(createMeasure(rawData.status, "ingest-upload",ingestNumber,config.file.name), createStartMark("ingest-upload",ingestNumber), createEndMark("ingest-upload",ingestNumber));
+		    		updateQueueList(); updateMetricsList(); 
+		 	    	consumeConfig();
+//		   		 	console.log(rawData);
+			        }
+			    );	
 	  	  	};
 	  	  	xhr.open( "PUT", baseUrlBackend + "resources/" + currentInputDatamodel.data_resource.uuid, true );
 	  	  	xhr.send(formData);
