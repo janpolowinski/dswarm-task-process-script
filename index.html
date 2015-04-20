@@ -65,6 +65,7 @@
 	var baseUrlBackend = "http://127.0.0.1:8087/dmp/";
 //  var baseUrlBackend = "http://sdvdmpdev.slub-dresden.de/dmp/";
 //  var baseUrlBackend = "http://194.95.145.44/dmp/";
+//	var baseUrlBackend = "http://sdvdswarm01.slub-dresden.de/dmp/"
     
 	/* CLASSES */
     var TaskConfiguration = function(inputDatamodelID, outputDatamodelID, projectID, persist) {
@@ -93,10 +94,19 @@
         this.processStep = ingestAsNewDatamodel;
         this.resourceID = resourceID;
         this.configID = configCount++;
-     }
+    }
     IngestConfiguration.prototype.toString = function ingestConfigToString() {
    	  var ret = "ingest " + this.resourceID;
    	  return ret;
+    }
+    var IngestByUpdateConfiguration = function(inputDatamodelID) {
+        this.processStep = updateResourceAndDatamodel;
+        this.resourceID = inputDatamodelID;
+        this.configID = configCount++;
+    }
+    IngestByUpdateConfiguration.prototype.toString = function ingestByUpdateConfigToString() {
+     	  var ret = "ingest (upload) to datamodel " + this.inputDatamodelID;
+     	  return ret;
     }
 
     /* PARAMETERS */
@@ -158,6 +168,11 @@
     
     function queueIngestConfig(resourceID) {
     	configQueue.push(new IngestConfiguration(resourceID));
+    	updateQueueList();
+    }
+    
+    function queueIngestByUpdateConfig(resourceID) {
+    	configQueue.push(new IngestByUpdateConfiguration(resourceID));
     	updateQueueList();
     }
         
@@ -327,12 +342,12 @@
     }
     
     
-  function updateResourceAndDatamodel(taskConfig) {
+  function updateResourceAndDatamodel(config) {
     	
-    	console.log("Updating datamodel with ID " + taskConfig.inputDatamodelID);
+    	console.log("Updating datamodel with ID " + config.inputDatamodelID);
 
         // get input data model
-        d3.json(baseUrlBackend + "datamodels/" + taskConfig.inputDatamodelID, function (error, currentInputDatamodel) {
+        d3.json(baseUrlBackend + "datamodels/" + config.inputDatamodelID, function (error, currentInputDatamodel) {
        	      	 
 		  	  // Add the file to the request.
 		  	  formData.append('file', file);
@@ -471,7 +486,7 @@
     configQueue = new Queue();
      
     // list resources
-    d3.json(baseUrlBackend + "resources", function (error, result) {
+    d3.json(baseUrlBackend + "resources?format=short", function (error, result) {
     	
     	var lis = contents.select("#resourcesView")
     		.append("div").append("ul")
@@ -519,7 +534,7 @@
     });
     
     // list projects
-    d3.json(baseUrlBackend + "projects", function (error, result) {
+    d3.json(baseUrlBackend + "projects?format=short", function (error, result) {
     	
     	var lis = contents.select("#projectsView")
     		.append("div").append("ul")
@@ -543,7 +558,7 @@
     });
     
     // list datamodels
-    d3.json(baseUrlBackend + "datamodels", function (error, result) {
+    d3.json(baseUrlBackend + "datamodels?format=medium", function (error, result) {
 
     	var lis = contents.select("#datamodelsView")
     		.append("div").append("ul")
@@ -614,7 +629,8 @@
 	  	  
 	  	 console.log("uploading file " + file.name);
 
-	  	 updateResourceAndDatamodel(currentTaskConfig);
+//	  	 updateResourceAndDatamodel(currentTaskConfig);
+	  	 queueIngestByUpdateConfig(currentTaskConfig.inputDatamodelID);
 	  	}
       }
     
