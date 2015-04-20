@@ -17,10 +17,12 @@
         </style>
     </head>
     <body>
-    
+
+    <h2>Upload Files and Import to (Input) Datamodel</h2>
+    <div>Will update the (input) datamodel from the task configuration by updating the datamodels resource and calling the datamodel (content) update.</div>
     <form id="file-form" action="handler.php" method="POST">
     	<input type="file" id="file-select" name="photos[]" multiple/>
-    	<button type="submit" id="upload-button">Upload</button>
+    	<button type="submit" id="upload-button">Upload and import files to Datamodel</button>
     </form>
 
     <h2>Current Transform (Task) Configuration</h2>
@@ -37,14 +39,14 @@
 	    </div>
     </div>
     
-    <div id="configurationsView">
+    <!--<div id="configurationsView">
 		<h2>Configurations (Ingest)</h2>
 		<div id="resourceConfigurationID"><span>current: </span><span class="value"> ... </span></div>
 	</div>
 	<div id="resourcesView">
 		<h2>Resources</h2>
 		<input id="updateInputDatamodel" type="checkbox" value="false"/>Update current input data model instead of creating a new data model during ingest
-	</div>
+	</div>-->
 
     <div id="projectsView"><h2>Projects</h2></div>
     <div id="datamodelsView"><h2>Datamodels</h2></div>
@@ -89,15 +91,6 @@
     ExportConfiguration.prototype.toString = function exportConfigToString() {
   	  var ret = "export " + this.datamodelID + " as " + this.format ;
   	  return ret;
-    }
-    var IngestConfiguration = function(resourceID) {
-        this.processStep = ingestAsNewDatamodel;
-        this.resourceID = resourceID;
-        this.configID = configCount++;
-    }
-    IngestConfiguration.prototype.toString = function ingestConfigToString() {
-   	  var ret = "ingest " + this.resourceID;
-   	  return ret;
     }
     var IngestByUpdateConfiguration = function(inputDatamodelID, file) {
         this.processStep = updateResourceAndDatamodel;
@@ -164,11 +157,6 @@
     
     function queueExportConfig(dataModelID,format) {
     	configQueue.push(new ExportConfiguration(dataModelID,format));
-    	updateQueueList();
-    }
-    
-    function queueIngestConfig(resourceID) {
-    	configQueue.push(new IngestConfiguration(resourceID));
     	updateQueueList();
     }
     
@@ -264,85 +252,6 @@
 	    );
     }
     
-    
-    function ingestAsNewDatamodel(ingestConfig) {
-    	
-    	console.log("Building datamodel from resource " + ingestConfig.resourceID + " using the default config (XML/record) ... ");
-
-        // get resource
-        d3.json(baseUrlBackend + "resources/" + ingestConfig.resourceID, function (error, resource) {
-        	
-    		// get config
-    		d3.json(baseUrlBackend + "configurations/" + resourceConfigurationID, function (error, configuration) {
-			
-		    	if (updateInputDatamodelOnIngest()) {
-		    		
-		    		if (null==currentTaskConfig.inputDatamodelID) { 
-		    			alert("Please select input data model as target for data model update.");
-		    			return; 
-		    		} // TODO: this check should happen at scheduling time ...
-		    		
-		    		console.log("Will update the current input data model " + currentTaskConfig.inputDatamodelID + " using the config " + configuration.uuid);
-		    		
-		    		// metrics
-		        	var ingestNumber = ingestRequestCount++;
-					performance.mark(createStartMark("ingest-update",ingestNumber));
-				
-				  	d3.xhr(baseUrlBackend + "datamodels/" + currentTaskConfig.inputDatamodelID + "/data")
-				    .header("Content-Type", "application/json;charset=utf-8")
-				    .header("Accept", "application/json, text/plain, */*")
-				    .post(function(err, rawData){
-	
-				        	// metrics
-							performance.mark(createEndMark("ingest-update",ingestNumber));
-							console.log("status: " + rawData.status);
-			        		performance.measure(createMeasure(rawData.status,"ingest-update",ingestNumber,resource.name), createStartMark("ingest-update",ingestNumber), createEndMark("ingest-update",ingestNumber));
-			        		updateQueueList(); updateMetricsList(); 
-					    	consumeConfig();
-
-//			    	  		console.log(rawData);
-				        }
-				    );
-		    		
-		    	} else {
-		    		
-			    	var configuredDatamodel = {
-			    			"data_resource": resource ,
-			    			"name" : resource.name,
-			    			"description" : resource.description,
-			    			"configuration" : configuration
-			    		};
-		    		
-		    		// metrics
-		        	var ingestNumber = ingestRequestCount++;
-					performance.mark(createStartMark("ingest",ingestNumber));
-					
-				  	d3.xhr(baseUrlBackend + "datamodels")
-				    .header("Content-Type", "application/json;charset=utf-8")
-				    .header("Accept", "application/json, text/plain, */*")
-				    .post(
-				        JSON.stringify(configuredDatamodel),
-				        function(err, rawData){
-	//			        	console.log(err); console.log(rawData.response);
-	
-				        	// metrics
-							performance.mark(createEndMark("ingest",ingestNumber));
-							console.log("status: " + rawData.status);
-			        		performance.measure(createMeasure(rawData.status,"ingest",ingestNumber,resource.name), createStartMark("ingest",ingestNumber), createEndMark("ingest",ingestNumber));
-			        		updateQueueList(); updateMetricsList(); 
-					    	consumeConfig();
-							
-				            var configurationResult = JSON.parse(rawData.response);
-			    	  		console.log("configurationResult:");
-			    	  		console.log(configurationResult);
-				        }
-				    );
-		    	}
-	    	});	
-    	});
-    }
-    
-    
   function updateResourceAndDatamodel(config) {
     	
     	console.log("Updating datamodel " + config.inputDatamodelID + " with slice " + config.file.name);
@@ -364,8 +273,7 @@
 	        	var ingestNumber = ingestRequestCount++;
 				performance.mark(createStartMark("ingest-upload",ingestNumber));
 
-//	            var resourceUpdateResult = JSON.parse(this.responseText);
-//	 	  		console.log(resourceUpdateResult);
+//	            var resourceUpdateResult = JSON.parse(this.responseText); console.log(resourceUpdateResult);
 	 	    	
 	 	    	// update datamodel (content)
 			  	d3.xhr(baseUrlBackend + "datamodels/" + config.inputDatamodelID + "/data")
@@ -392,14 +300,11 @@
     function updateMetricsList() {
     	
 		var updatedMeasurements = window.performance.getEntriesByType('measure');
-		
-//	    console.log("measurements:");
-//	    console.log(updatedMeasurements);
+//	    console.log("measurements:"); console.log(updatedMeasurements);
 	    
 	    var convertedData = [];
 	    var taskDurations = []; taskDurations[0] = "taskdurations";
 	    convertedData[0] = taskDurations;
-	    
 //	    console.log(convertedData);
 
 		for (var i = 0; i < updatedMeasurements.length; ++i) {
@@ -423,26 +328,17 @@
     function updateQueueList() {
     	
     	var updatedQueue = configQueue.getCurrentArray();
-    	
-//    	for(i = 0; i < updatedQueue.length; i++ )
-//    		console.log(updatedQueue[i].inputDatamodelID);
-
     	var li = d3.select("#queueList").selectAll("li").data(updatedQueue, function(d){return d.configID ;});
     	li.enter().append("li")
     		.call(highlightTemporarily);
     	li.text(function(d) { return d.toString() ;});
     	li.exit().fadeAway();
-
     }
     
     function setCurrent(inputElement, className) {
     	d3.select("."+className).classed(className + " " + "currentSelection",false);
     	d3.select(inputElement.parentNode).classed(className + " " + "currentSelection",true);
     }
-    
-	updateInputDatamodelOnIngest = function () {
-		return d3.select("#updateInputDatamodel").property("checked");
-	}
     
     function formatedTime(timeInMs) {
 	    var mydate = new Date(timeInMs);
@@ -638,35 +534,13 @@
   	  var files = fileSelect.files;
   	  
 	  for (var i = 0; i < files.length; i++) {
-		  
 	  	 var file = files[i];
-	  	  
 	  	 console.log("uploading file " + file.name);
-	  	 
 	  	 queueIngestByUpdateConfig(currentTaskConfig.inputDatamodelID, file);
 	  	}
 	  
-	  uploadButton.innerHTML = 'Upload';
+	  uploadButton.innerHTML = 'Upload and import files to Datamodel';
       }
-    
-    
-//	 var xhr = new XMLHttpRequest();
-//	 xhr.onload = function(){
-//       	// metrics
-//			performance.mark(createEndMark("ingest-update",ingestNumber));
-//			console.log("status: " + this.status);
-//   		performance.measure(createMeasure(this.status, "ingest-update",ingestNumber,resource.name), createStartMark("ingest-update",ingestNumber), createEndMark("ingest-update",ingestNumber));
-//   		updateQueueList(); updateMetricsList(); 
-//	    	consumeConfig();
-//   		
-//           var configurationResult = JSON.parse(this.responseText);
-//	  		console.log("updated datamodel:");
-//	  		console.log(configurationResult);
-//	 };
-//	  xhr.open( "PUT", baseUrlBackend + "datamodels/" + currentTaskConfig.inputDatamodelID + "/data", true );
-//	  xhr.setRequestHeader( "Content-Type", "application/json;charset=utf-8" );
-//	  xhr.setRequestHeader( "Accept", "application/json, text/plain, */*" );
-//	  xhr.send(JSON.stringify(configuredDatamodel));
    
     </script>
     
