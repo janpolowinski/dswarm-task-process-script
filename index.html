@@ -99,9 +99,10 @@
    	  var ret = "ingest " + this.resourceID;
    	  return ret;
     }
-    var IngestByUpdateConfiguration = function(inputDatamodelID) {
+    var IngestByUpdateConfiguration = function(inputDatamodelID, file) {
         this.processStep = updateResourceAndDatamodel;
-        this.resourceID = inputDatamodelID;
+        this.inputDatamodelID = inputDatamodelID;
+        this.file = file;
         this.configID = configCount++;
     }
     IngestByUpdateConfiguration.prototype.toString = function ingestByUpdateConfigToString() {
@@ -171,8 +172,8 @@
     	updateQueueList();
     }
     
-    function queueIngestByUpdateConfig(resourceID) {
-    	configQueue.push(new IngestByUpdateConfiguration(resourceID));
+    function queueIngestByUpdateConfig(resourceID, file) {
+    	configQueue.push(new IngestByUpdateConfiguration(resourceID, file));
     	updateQueueList();
     }
         
@@ -344,33 +345,36 @@
     
   function updateResourceAndDatamodel(config) {
     	
-    	console.log("Updating datamodel with ID " + config.inputDatamodelID);
+    	console.log("Updating datamodel " + config.inputDatamodelID + " with slice " + config.file.name);
 
         // get input data model
         d3.json(baseUrlBackend + "datamodels/" + config.inputDatamodelID, function (error, currentInputDatamodel) {
+        	
+        	// metrics
+        	var ingestNumber = ingestRequestCount++;
+			performance.mark(createStartMark("ingest-upload",ingestNumber));
        	      	 
-		  	  // Add the file to the request.
-		  	  formData.append('file', file);
-		  	  formData.append('name', file.name);
-		  	  formData.append('description', file.name);
-	  	  
-		 	  var xhr = new XMLHttpRequest();
-		 	  xhr.onload = function(){
-		        	// metrics
-	//	 			performance.mark(createEndMark("ingest-update",ingestNumber));
-		 			console.log("status: " + this.status);
-	//	    		performance.measure(createMeasure(this.status, "ingest-update",ingestNumber,resource.name), createStartMark("ingest-update",ingestNumber), createEndMark("ingest-update",ingestNumber));
-	//	    		updateQueueList(); updateMetricsList(); 
-	//	 	    	consumeConfig();
-		    		
-		            var resourceUpdateResult = JSON.parse(this.responseText);
-		 	  		console.log("uploaded resource " ); // + resourceUpdateResult);
-		 	  		console.log(resourceUpdateResult);
-		 	  };
-			  xhr.open( "PUT", baseUrlBackend + "resources/" + currentInputDatamodel.data_resource.uuid, true );
-			  xhr.send(formData);
-        
-	  		});
+			// Add the file to the request.
+			var formData = new FormData();
+	  	  	formData.append('file', config.file);
+	  	  	formData.append('name', config.file.name);
+	  	  	formData.append('description', config.file.name);
+  	  
+	  	  	var xhr = new XMLHttpRequest();
+	  	  	xhr.onload = function(){
+	        	// metrics
+	 			performance.mark(createEndMark("ingest-upload",ingestNumber));
+	    		performance.measure(createMeasure(this.status, "ingest-upload",ingestNumber,config.file.name), createStartMark("ingest-upload",ingestNumber), createEndMark("ingest-upload",ingestNumber));
+	    		updateQueueList(); updateMetricsList(); 
+	 	    	consumeConfig();
+	    		
+	            var resourceUpdateResult = JSON.parse(this.responseText);
+//	 	  		console.log(resourceUpdateResult);
+	  	  	};
+	  	  	xhr.open( "PUT", baseUrlBackend + "resources/" + currentInputDatamodel.data_resource.uuid, true );
+	  	  	xhr.send(formData);
+    
+  		});
     }
 
     
@@ -378,18 +382,18 @@
     	
 		var updatedMeasurements = window.performance.getEntriesByType('measure');
 		
-	    console.log("measurements:");
-	    console.log(updatedMeasurements);
+//	    console.log("measurements:");
+//	    console.log(updatedMeasurements);
 	    
 	    var convertedData = [];
 	    var taskDurations = []; taskDurations[0] = "taskdurations";
 	    convertedData[0] = taskDurations;
 	    
-	    console.log(convertedData);
+//	    console.log(convertedData);
 
 		for (var i = 0; i < updatedMeasurements.length; ++i) {
 		  var req = updatedMeasurements[i];
-		  console.log('Process step ' + req.name + ' took ' + formatedTime(req.duration));
+//		  console.log('Process step ' + req.name + ' took ' + formatedTime(req.duration));
 		  taskDurations[i+1] = req.duration;
 		}
 		
@@ -619,19 +623,19 @@
     // upload files and create ingest jobs
     form.onsubmit = function(event) {
   	  event.preventDefault();
-  	  uploadButton.innerHTML = 'Uploading...';
+  	  uploadButton.innerHTML = 'Queuing Slices for Upload and Update ...';
   	  var files = fileSelect.files;
-  	  var formData = new FormData();
   	  
 	  for (var i = 0; i < files.length; i++) {
 		  
 	  	 var file = files[i];
 	  	  
 	  	 console.log("uploading file " + file.name);
-
-//	  	 updateResourceAndDatamodel(currentTaskConfig);
-	  	 queueIngestByUpdateConfig(currentTaskConfig.inputDatamodelID);
+	  	 
+	  	 queueIngestByUpdateConfig(currentTaskConfig.inputDatamodelID, file);
 	  	}
+	  
+	  uploadButton.innerHTML = 'Upload';
       }
     
     
