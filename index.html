@@ -67,7 +67,8 @@
 	var baseUrlBackend = "http://127.0.0.1:8087/dmp/";
 //  var baseUrlBackend = "http://sdvdmpdev.slub-dresden.de/dmp/";
 //  var baseUrlBackend = "http://194.95.145.44/dmp/";
-//	var baseUrlBackend = "http://sdvdswarm01.slub-dresden.de/dmp/"
+//	var baseUrlBackend = "http://sdvdswarm01.slub-dresden.de/dmp/";
+//	var baseUrlBackend = "http://212.201.62.68/dmp/";
     
 	/* CLASSES */
     var TaskConfiguration = function(inputDatamodelID, outputDatamodelID, projectID, persist) {
@@ -191,14 +192,17 @@
                 d3.json(baseUrlBackend + "datamodels/" + taskConfig.outputDatamodelID, function (error, result) {
                 	
                 	var currentOutputDatamodel = result;
-                	var currentTask = buildTask(currentJob, currentInputDatamodel, currentOutputDatamodel);
+//                	var currentTask = buildTask(currentJob, currentInputDatamodel, currentOutputDatamodel);
+                	var currentTask = {};
+                	currentTask.task = buildTask(currentJob, currentInputDatamodel, currentOutputDatamodel); // endpoint seems to expect "{"task" = { ... }}" now 
+                	currentTask.persist = taskConfig.persist;
                 	
                 		// metrics
 	                	var transformNumber = transformRequestCount++;
 	                	performance.mark(createStartMark("transformation",transformNumber));
 
                 	  	// run task
-                	  	d3.xhr(baseUrlBackend + "tasks?persist=" + taskConfig.persist)
+                	  	d3.xhr(baseUrlBackend + "tasks")
                 	    .header("Content-Type", "application/json;charset=utf-8")
                 	    .header("Accept", "application/json, text/plain, */*")
                 	    .post(
