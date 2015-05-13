@@ -64,11 +64,11 @@
     <script type="text/javascript">
     
     /* SETTINGS */
-	var baseUrlBackend = "http://127.0.0.1:8087/dmp/";
+//	var baseUrlBackend = "http://127.0.0.1:8087/dmp/";
 //  var baseUrlBackend = "http://sdvdmpdev.slub-dresden.de/dmp/";
 //  var baseUrlBackend = "http://194.95.145.44/dmp/";
 //	var baseUrlBackend = "http://sdvdswarm01.slub-dresden.de/dmp/";
-//	var baseUrlBackend = "http://212.201.62.68/dmp/";
+	var baseUrlBackend = "http://212.201.62.68/dmp/";
     
 	/* CLASSES */
     var TaskConfiguration = function(inputDatamodelID, outputDatamodelID, projectID, persist) {
@@ -196,6 +196,7 @@
                 	var currentTask = {};
                 	currentTask.task = buildTask(currentJob, currentInputDatamodel, currentOutputDatamodel); // endpoint seems to expect "{"task" = { ... }}" now 
                 	currentTask.persist = taskConfig.persist;
+                	currentTask.do_not_return_data = "false";
                 	
                 		// metrics
 	                	var transformNumber = transformRequestCount++;
