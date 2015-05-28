@@ -11,12 +11,26 @@
         	body { font-family: "Arial"; font-size: 0.9em; }
         	.currentSelection { font-weight: bold ; color: red ; }
         	#metricsView { position:absolute; top:0px; right:0px; margin:1em; background-color:white ; }
+        	.mapping:hover {background-color:#dcc ; }
+        	td,th {width:33% ; }
+        	table {width:100% ; }
         </style>
     </head>
     <body>
 
     <div id="projectsView"><h2>Projects</h2></div>
     <div id="projectDetailsView"><h3>Project Details</h3></div>
+    <div>
+    <table style="padding:10px">
+		<tr>
+			<th>mapping name</th>
+			<th>filter (of IAP 0) - datafield/tag</th>
+			<th>subfield/code</th>
+		<tr>
+	</table>
+	    <table id="projectDetailsTable" style="padding:10px">
+	    </table>
+    </div>
     
     
     <script type="text/javascript">
@@ -392,14 +406,7 @@
     		;
     	
     	lis.append("button")
-    		.attr("onclick", function(d){
-    			return "setCurrent(this, 'project'); currentTaskConfig.projectID = '" + d.uuid + "'; updateParameterView() ; ";
-   				})
-			.text(function(d){return "Use for job" ;})
-			;
-    	
-    	lis.append("button")
-		.attr("onclick", function(d){
+			.attr("onclick", function(d){
 			return "updateMappingDetails('" + d.uuid + "') ; ";
 				})
 		.text(function(d){return "Show detailed mappings" ;})
@@ -423,29 +430,59 @@
             
             // list mapping details per project
             
-            var lis = contents.select("#projectDetailsView")
-    		.append("div").append("ul")
-    		.selectAll("li.mapping")
+            contents.select("#projectDetailsTable").selectAll("tr").remove();
+            
+            var mappingTable = contents.select("#projectDetailsTable")
+    		.selectAll("tr.mapping")
     		.data(currentProject.mappings.sort(function(a, b) { return d3.ascending(a.name, b.name); }))
     		;
             
-            lis.enter()
-    		.append("li")
+            var rowEnter = mappingTable.enter()
+    		.append("tr")
     		.attr("class", "mapping")
-    		.text(function(d){ return d.name + " filter of IAP 0: " + formatFilterExpression(d.input_attribute_paths[0].filter.expression); })
-    		.attr("title", function(d){ return " (" + d.uuid + ")"; })
-    		;
+    		.attr("title", function(d){ return " (" + d.uuid + ")"; });
+            
+            rowEnter.append("td")
+    		.text(function(d){ return d.name ; });
+            
+            rowEnter.filter(function(d){return null != d.input_attribute_paths[0].filter}).append("td")
+    		.text(function(d){ return getTagValueFromFilter(d.input_attribute_paths[0].filter.expression); });
+
+            rowEnter.filter(function(d){return null != d.input_attribute_paths[0].filter}).append("td")
+    		.text(function(d){ return getCodeValueFromFilter(d.input_attribute_paths[0].filter.expression) + 
+    			// check for usage of ID, since this may be have been done accidentally
+    			getIDValueFromFilter(d.input_attribute_paths[0].filter.expression) ; });
+
         });
         }
-        
-function formatFilterExpression(expressionString) {
+ 
+function getTagValueFromFilter(expressionString) {
 	if (null!=expressionString) {
-	    var re = /.*#tag\":\"(.*)\"\}.*code\":\"(.*)\"\}\]/
-	    var subst = 'datafield/tag: $1, subfield/code: $2'; 
-	    return expressionString.replace(re, subst);
+	    var re = /^.*#tag":"([^"]*)"\}.*/; 
+	    var matches = expressionString.match(re);
+        if (matches == null) return "";
+        else return matches[1];
 	} else return "";
-}        
+}
    
+function getCodeValueFromFilter(expressionString) {
+	if (null!=expressionString) {
+	    var re = /^.*#code":"([^"]*)"\}.*/; 
+	    var matches = expressionString.match(re);
+        if (matches == null) return "";
+        else return matches[1];
+	} else return "";
+}
+
+function getIDValueFromFilter(expressionString) {
+	if (null!=expressionString) {
+	    var re = /^.*#id":"([^"]*)"\}.*/; 
+	    var matches = expressionString.match(re);
+        if (matches != null) return " !!!!!!!!!!!!! ID was used somewhere in Filter! Intentionally? !!!!!!!!!!!!!!!!";
+        else return "";
+	} else return "";
+}
+
     </script>
     </body>
 </html>
